@@ -4,11 +4,10 @@ import pandas as pd
 import re
 import os
 import logging
-import random
 import json
-from typing import Dict, List, Any, Optional
+from typing import List
 from datetime import datetime
-from playwright.async_api import async_playwright, TimeoutError
+from playwright.async_api import async_playwright
 
 # 導入 dotenv 處理環境變數
 from dotenv import load_dotenv
@@ -21,10 +20,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema import StrOutputParser
 from langchain.schema.runnable import RunnablePassthrough, RunnableLambda
-from langchain.output_parsers import PydanticOutputParser
 from langchain.pydantic_v1 import BaseModel, Field
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import SequentialChain, TransformChain, LLMChain
 
 # 設置日誌
 logging.basicConfig(
