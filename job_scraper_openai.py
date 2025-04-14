@@ -22,7 +22,7 @@ logger = logging.getLogger("104_scraper")
 
 # OpenAI API 配置
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")  # 從環境變數中獲取API金鑰
-DEFAULT_MODEL = "gpt-3.5-turbo-16k"  # 使用具有更大上下文的模型
+DEFAULT_MODEL = "gpt-3.5-turbo"  # 使用具有更大上下文的模型
 
 # 初始化 OpenAI 客戶端
 openai_client = None
@@ -133,9 +133,7 @@ async def analyze_job_descriptions(job_data):
                     {"role": "system", "content": "你是一位專業的職缺分析專家，擅長從職缺描述中提取關鍵資訊並進行分析。"},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.2,  # 較低的溫度以獲得更一致的回應
-                max_tokens=4000,
-                response_format={"type": "json_object"}
+                temperature=0.2  # 較低的溫度以獲得更一致的回應
             )
             
             # 解析回應
@@ -232,9 +230,7 @@ async def extract_structured_job_info(html_content, job_title_selector):
                 HTML: {html_sample}
                 """}
             ],
-            temperature=0.2,
-            max_tokens=4000,
-            response_format={"type": "json_object"}
+            temperature=0.2
         )
         
         result = json.loads(response.choices[0].message.content)
