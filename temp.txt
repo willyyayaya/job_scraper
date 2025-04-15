@@ -1,0 +1,3116 @@
+import asyncio
+import time
+import pandas as pd
+import os
+import logging
+import random
+import json
+from datetime import datetime
+from playwright.async_api import async_playwright, TimeoutError
+import re
+
+# 設置日誌
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("resume_scraper.log", encoding="utf-8"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger("104_resume_scraper")
+
+class ResumeScraperConfig:
+    """爬蟲配置類"""
+    def __init__(self, username="", password="", download_photos=True, max_pages=5, delay_range=(1, 3),
+                 search_keyword=""):
+        self.username = username  # 104企業會員帳號
+        self.password = password  # 104企業會員密碼
+        self.download_photos = download_photos  # 是否下載照片
+        self.max_pages = max_pages  # 最大爬取頁數
+        self.delay_range = delay_range  # 請求延遲範圍(秒)
+        self.search_keyword = search_keyword  # 搜尋關鍵字
+        
+        # 網站URL
+        self.vip_url = "https://vip.104.com.tw/index/index"  # VIP系統首頁
+        self.search_url = "https://vip.104.com.tw/search"  # 搜尋頁面URL
+        
+        # 建立輸出目錄
+        self.timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        self.output_dir = f"resume_data_{self.timestamp}"
+        os.makedirs(self.output_dir, exist_ok=True)
+        
+        if self.download_photos:
+            self.photos_dir = os.path.join(self.output_dir, "photos")
+            os.makedirs(self.photos_dir, exist_ok=True)
+
+class ResumeScraper:
+    """104求職者資料爬蟲類"""
+    
+    def __init__(self, config=None):
+        self.config = config or ResumeScraperConfig()
+        self.browser = None
+        self.context = None
+        self.page = None
+    
+    async def initialize(self):
+        """初始化瀏覽器"""
+        playwright = await async_playwright().start()
+        self.browser = await playwright.chromium.launch(headless=False)
+        self.context = await self.browser.new_context(
+            viewport={"width": 1280, "height": 800},
+            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
+        self.page = await self.context.new_page()
+        logger.info("瀏覽器初始化成功")
+    
+    async def login_to_vip(self):
+        """登入104 VIP系統"""
+        try:
+            logger.info("開始登入104 VIP系統")
+            
+            # 檢查是否已經登入
+            logger.info("檢查是否已經登入")
+            current_url = self.page.url
+            
+            # 檢查是否已經在VIP頁面
+            if 'vip.104.com' in current_url and ('/company' in current_url or '/index/index' in current_url):
+                try:
+                    # 使用更多選擇器來檢測登入狀態
+                    logged_in_selectors = [
+                        '.user-info',
+                        '.profile-area',
+                        '.login-status',
+                        '.user-profile',
+                        '.account-info',
+                        '.logout-button',
+                        'a:has-text("登出")',
+                        'a:text("登出")',
+                        'button:has-text("登出")',
+                        'a[href*="logout"]'
+                    ]
+                    
+                    for selector in logged_in_selectors:
+                        try:
+                            logged_in_element = await self.page.query_selector(selector)
+                            if logged_in_element:
+                                logger.info(f"檢測到已登入狀態 (選擇器: {selector})")
+                                return True
+                        except Exception as e:
+                            logger.debug(f"檢查登入狀態選擇器 '{selector}' 失敗: {str(e)}")
+                            continue
+                            
+                    # 檢查頁面文字是否包含歡迎信息
+                    page_text = await self.page.evaluate('() => document.body.innerText')
+                    welcome_phrases = ["歡迎", "您好", "Welcome", "登出", "Logout", "會員專區"]
+                    
+                    if any(phrase in page_text for phrase in welcome_phrases):
+                        logger.info("檢測到歡迎信息，判斷已登入")
+                        return True
+                        
+                    logger.info("在VIP頁面但未檢測到已登入狀態，將嘗試登入")
+                except Exception as e:
+                    logger.debug(f"檢查已登入狀態時出錯: {str(e)}")
+            
+            # 導航到VIP首頁
+            logger.info(f"導航到VIP首頁: {self.config.vip_url}")
+            await self.page.goto(self.config.vip_url)
+            await self.page.wait_for_load_state('networkidle', timeout=10000)
+            
+            # 再次檢查登入狀態 (導航後)
+            try:
+                # 檢查是否已經登入 (檢查是否能找到登出連結或用戶信息)
+                logged_in_selectors = ['.user-info', '.profile-area', 'a:has-text("登出")', 'a[href*="logout"]']
+                for selector in logged_in_selectors:
+                    try:
+                        logged_in_element = await self.page.query_selector(selector)
+                        if logged_in_element:
+                            logger.info(f"已經登入VIP系統 (選擇器: {selector})")
+                            return True
+                    except Exception as e:
+                        logger.debug(f"檢查登入狀態選擇器 '{selector}' 失敗: {str(e)}")
+                        continue
+                        
+                # 檢查是否處於重複登入頁面
+                repeat_login_page = await self.handle_repeat_login_page(self.page)
+                if repeat_login_page:
+                    logger.info("重複登入頁面處理完成，檢查登入狀態")
+                    # 等待頁面加載
+                    await self.page.wait_for_load_state('networkidle', timeout=10000)
+                    
+                    # 檢查處理後是否已登入
+                    for selector in logged_in_selectors:
+                        try:
+                            logged_in_element = await self.page.query_selector(selector)
+                            if logged_in_element:
+                                logger.info(f"處理重複登入後已成功登入 (選擇器: {selector})")
+                                return True
+                        except Exception as e:
+                            logger.debug(f"檢查登入狀態選擇器 '{selector}' 失敗: {str(e)}")
+                            continue
+            except Exception as e:
+                logger.warning(f"檢查登入狀態時出錯: {str(e)}")
+            
+            # 嘗試點擊登入按鈕
+            login_button_selectors = [
+                'a:has-text("登入")',
+                'a:text("登入")',
+                'button:has-text("登入")',
+                'button:text("登入")',
+                'a.btn-login',
+                'button.btn-login',
+                '.login-button',
+                'a[href*="login"]',
+                'a.login',
+                'button.login'
+            ]
+            
+            login_button_clicked = False
+            for selector in login_button_selectors:
+                try:
+                    await self.page.wait_for_selector(selector, timeout=3000, state="visible")
+                    login_button = await self.page.query_selector(selector)
+                    if login_button:
+                        await login_button.scroll_into_view_if_needed()
+                        await asyncio.sleep(0.5)
+                        await login_button.click()
+                        logger.info(f"已點擊登入按鈕: {selector}")
+                        login_button_clicked = True
+                        
+                        # 等待頁面加載
+                        await self.page.wait_for_load_state('networkidle', timeout=10000)
+                        await asyncio.sleep(2)  # 額外等待以確保頁面完全加載
+                        break
+                except Exception as e:
+                    logger.debug(f"使用選擇器 '{selector}' 點擊登入按鈕失敗: {str(e)}")
+                    continue
+            
+            # 如果沒有明確的登入按鈕，檢查是否已在登入頁面
+            if not login_button_clicked:
+                # 檢查當前URL是否為登入頁面
+                current_url = self.page.url
+                if 'login' not in current_url and 'signin' not in current_url:
+                    # 如果不在登入頁面，直接導航到登入頁面
+                    logger.info("未找到登入按鈕，直接導航到登入頁面")
+                    login_url = "https://vip.104.com.tw/login"
+                    await self.page.goto(login_url)
+                    await self.page.wait_for_load_state('networkidle', timeout=15000)
+                    await self.page.wait_for_load_state('domcontentloaded', timeout=15000)
+                    await asyncio.sleep(1)  # 額外等待1秒確保頁面完全加載
+                    logger.info("登入頁面已加載")
+                else:
+                    logger.info("當前已在登入頁面")
+            
+            # 等待登入頁面加載
+            logger.info("等待登入頁面完全加載")
+            await asyncio.sleep(1)  # 等待1秒確保頁面加載
+            await self.page.wait_for_load_state('networkidle', timeout=15000)
+            await self.page.wait_for_load_state('domcontentloaded', timeout=15000)
+            
+            # 尋找並填寫用戶名和密碼
+            username_selectors = [
+                # 直接尋找信箱相關選擇器
+                'input[placeholder*="信箱"]',
+                'input[placeholder*="email"]',
+                'input[placeholder*="Email"]',
+                'input[placeholder*="電子郵件"]',
+                'input[name="email"]',
+                'input[id="email"]',
+                'input[type="email"]',
+                'input[autocomplete="email"]',
+                'input.email-input',
+                '#emailInput',
+                '.email-field input',
+                # 原有的用戶名選擇器
+                'input[name="username"]',
+                'input[type="text"][placeholder*="帳號"]',
+                'input[type="text"][placeholder*="電子郵件"]',
+                'input[type="text"][placeholder*="email"]',
+                'input[type="text"][placeholder*="Email"]',
+                'input[type="text"][placeholder*="信箱"]',
+                'input[id="username"]',
+                'input[autocomplete="username"]',
+                'input[name="account"]',
+                'input[id="account"]',
+                '.username-input',
+                'input.form-control:not([type="password"])',
+                'form input[type="text"]',
+                'input[type="text"]:not([style*="display: none"])',
+                'input[data-type="account"]',
+                '#account',
+                'input[type="text"]'
+            ]
+            
+            # 直接使用JavaScript嘗試找到Email輸入框並填入特定信箱
+            logger.info("嘗試使用JavaScript專門尋找email輸入框")
+            try:
+                js_filled = await self.page.evaluate('''
+                (email) => {
+                    // 尋找所有可能的input元素
+                    const inputs = document.querySelectorAll('input');
+                    console.log("找到的輸入框數量:", inputs.length);
+                    
+                    // 首先嘗試找明確的email相關輸入框
+                    for (const input of inputs) {
+                        const isEmail = 
+                            input.type === 'email' ||
+                            input.name?.toLowerCase().includes('email') ||
+                            input.id?.toLowerCase().includes('email') ||
+                            input.placeholder?.toLowerCase().includes('email') ||
+                            input.placeholder?.includes('信箱') ||
+                            input.placeholder?.includes('電子郵件') ||
+                            input.getAttribute('autocomplete')?.toLowerCase() === 'email';
+                            
+                        if (isEmail && 
+                            window.getComputedStyle(input).display !== 'none' && 
+                            window.getComputedStyle(input).visibility !== 'hidden') {
+                            console.log("找到email輸入框:", input);
+                            input.value = email;
+                            input.dispatchEvent(new Event('input', { bubbles: true }));
+                            input.dispatchEvent(new Event('change', { bubbles: true }));
+                            return {success: true, element: {
+                                id: input.id,
+                                name: input.name,
+                                type: input.type,
+                                placeholder: input.placeholder,
+                                class: input.className
+                            }};
+                        }
+                    }
+                    
+                    // 如果沒找到明確的email輸入框，嘗試第一個文本輸入框
+                    for (const input of inputs) {
+                        if ((input.type === 'text' || !input.type) && 
+                            window.getComputedStyle(input).display !== 'none' && 
+                            window.getComputedStyle(input).visibility !== 'hidden' &&
+                            !input.name?.toLowerCase().includes('password')) {
+                            console.log("嘗試使用第一個文本輸入框:", input);
+                            input.value = email;
+                            input.dispatchEvent(new Event('input', { bubbles: true }));
+                            input.dispatchEvent(new Event('change', { bubbles: true }));
+                            return {success: true, element: {
+                                id: input.id,
+                                name: input.name,
+                                type: input.type,
+                                placeholder: input.placeholder,
+                                class: input.className
+                            }};
+                        }
+                    }
+                    
+                    // 檢查並列印出所有輸入框以便調試
+                    const allInputDetails = Array.from(inputs).map(input => ({
+                        id: input.id,
+                        name: input.name,
+                        type: input.type,
+                        placeholder: input.placeholder,
+                        class: input.className,
+                        visible: window.getComputedStyle(input).display !== 'none' && window.getComputedStyle(input).visibility !== 'hidden'
+                    }));
+                    console.log("所有輸入框詳情:", JSON.stringify(allInputDetails));
+                    
+                    return {success: false, allInputs: allInputDetails};
+                }
+                ''', "willyyayaya@gmail.com")  # 直接使用信箱
+                
+                if js_filled and js_filled.get('success'):
+                    logger.info(f"已通過JavaScript找到並填入信箱: willyyayaya@gmail.com")
+                    logger.info(f"使用的輸入框元素: {js_filled.get('element')}")
+                    username_filled = True
+                else:
+                    logger.warning("JavaScript未能找到信箱輸入框")
+                    if js_filled and 'allInputs' in js_filled:
+                        logger.debug(f"頁面上的輸入框詳情: {js_filled.get('allInputs')}")
+            except Exception as e:
+                logger.debug(f"JavaScript尋找和填入信箱失敗: {str(e)}")
+                
+            # 強制列印所有存在的輸入框，以便分析
+            try:
+                input_elements = await self.page.evaluate('''
+                () => {
+                    return Array.from(document.querySelectorAll('input')).map(input => {
+                        const styles = window.getComputedStyle(input);
+                        return {
+                            id: input.id,
+                            name: input.name, 
+                            type: input.type,
+                            value: input.value,
+                            placeholder: input.placeholder,
+                            class: input.className,
+                            visible: styles.display !== 'none' && styles.visibility !== 'hidden',
+                            width: input.offsetWidth,
+                            height: input.offsetHeight,
+                            position: {
+                                x: input.getBoundingClientRect().left,
+                                y: input.getBoundingClientRect().top
+                            }
+                        };
+                    });
+                }
+                ''')
+                logger.info(f"頁面上的所有輸入框: {json.dumps(input_elements, ensure_ascii=False)}")
+            except Exception as e:
+                logger.debug(f"獲取輸入框詳情失敗: {str(e)}")
+            
+            # 嘗試點擊頁面上任何看起來像登入表單的位置
+            try:
+                logger.info("嘗試定位並直接操作登入表單")
+                login_form = await self.page.evaluate('''
+                () => {
+                    // 尋找登入表單
+                    const forms = document.querySelectorAll('form');
+                    if (forms.length > 0) {
+                        const inputs = forms[0].querySelectorAll('input');
+                        for (const input of inputs) {
+                            if (input.type !== 'password' && input.type !== 'hidden' &&
+                                window.getComputedStyle(input).display !== 'none') {
+                                input.value = "willyyayaya@gmail.com";
+                                input.dispatchEvent(new Event('input', { bubbles: true }));
+                                input.dispatchEvent(new Event('change', { bubbles: true }));
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                }
+                ''')
+                if login_form:
+                    logger.info("已在登入表單中填入信箱")
+                    username_filled = True
+            except Exception as e:
+                logger.debug(f"直接操作登入表單失敗: {str(e)}")
+                
+            # 嘗試使用鍵盤直接輸入
+            try:
+                logger.info("嘗試使用鍵盤模擬直接輸入")
+                await self.page.keyboard.press('Tab')  # 嘗試聚焦到第一個輸入框
+                await asyncio.sleep(0.5)
+                await self.page.keyboard.type("willyyayaya@gmail.com", delay=100)  # 慢速輸入確保準確性
+                logger.info("已使用鍵盤模擬輸入信箱")
+                username_filled = True
+            except Exception as e:
+                logger.debug(f"使用鍵盤模擬輸入失敗: {str(e)}")
+            
+            # 嘗試使用JavaScript直接填入用戶名
+            if not username_filled:
+                logger.info("嘗試使用JavaScript直接填入用戶名")
+                try:
+                    js_filled = await self.page.evaluate(f'''
+                    (username) => {{
+                        const possibleInputs = [
+                            ...Array.from(document.querySelectorAll('input[type="email"]')),
+                            ...Array.from(document.querySelectorAll('input[type="text"]')),
+                            ...Array.from(document.querySelectorAll('input:not([type="password"])')),
+                            ...Array.from(document.querySelectorAll('input[placeholder*="帳號"]')),
+                            ...Array.from(document.querySelectorAll('input[placeholder*="信箱"]')),
+                            ...Array.from(document.querySelectorAll('input[placeholder*="email"]')),
+                            ...Array.from(document.querySelectorAll('input[placeholder*="Email"]')),
+                            ...Array.from(document.querySelectorAll('#username, #account, #email'))
+                        ];
+                        
+                        for (const input of possibleInputs) {{
+                            if (input && input.type !== 'hidden' && 
+                                window.getComputedStyle(input).display !== 'none' &&
+                                window.getComputedStyle(input).visibility !== 'hidden') {{
+                                input.value = username;
+                                input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                                return true;
+                            }}
+                        }}
+                        return false;
+                    }}
+                    ''', self.config.username)
+                    
+                    if js_filled:
+                        logger.info(f"已通過JavaScript填入用戶名: {self.config.username}")
+                        username_filled = True
+                except Exception as e:
+                    logger.debug(f"JavaScript填入用戶名失敗: {str(e)}")
+            
+            # 填入用戶名
+            username_filled = False
+            for selector in username_selectors:
+                try:
+                    username_input = await self.page.query_selector(selector)
+                    if username_input:
+                        # 清空輸入框然後填入用戶名
+                        await username_input.click()
+                        await username_input.fill("")
+                        await asyncio.sleep(0.5)
+                        await username_input.fill(self.config.username)
+                        logger.info(f"已填入用戶名: {self.config.username} (使用選擇器: {selector})")
+                        username_filled = True
+                        break
+                except Exception as e:
+                    logger.debug(f"使用選擇器 '{selector}' 填入用戶名失敗: {str(e)}")
+                    continue
+            
+            # 密碼選擇器也需要更新
+            password_selectors = [
+                'input[name="password"]',
+                'input[type="password"]',
+                'input[id="password"]',
+                'input[placeholder*="密碼"]',
+                'input[autocomplete="current-password"]',
+                '.password-input',
+                'form input[type="password"]',
+                'input[data-type="password"]',
+                '#password'
+            ]
+            
+            # 填入密碼
+            password_filled = False
+            for selector in password_selectors:
+                try:
+                    await self.page.wait_for_selector(selector, timeout=3000, state="visible")
+                    password_input = await self.page.query_selector(selector)
+                    if password_input:
+                        # 清空輸入框然後填入密碼
+                        await password_input.click()
+                        await password_input.fill("")
+                        await asyncio.sleep(0.5)
+                        await password_input.fill(self.config.password)
+                        logger.info(f"已填入密碼 (使用選擇器: {selector})")
+                        password_filled = True
+                        break
+                except Exception as e:
+                    logger.debug(f"使用選擇器 '{selector}' 填入密碼失敗: {str(e)}")
+                    continue
+            
+            # 如果普通方式填入密碼失敗，嘗試使用JavaScript填入固定密碼
+            if not password_filled:
+                logger.info("嘗試使用JavaScript直接填入密碼")
+                try:
+                    js_filled = await self.page.evaluate('''
+                    (password) => {
+                        // 尋找所有密碼輸入框
+                        const passwordInputs = document.querySelectorAll('input[type="password"]');
+                        console.log("找到的密碼輸入框數量:", passwordInputs.length);
+                        
+                        for (const input of passwordInputs) {
+                            if (window.getComputedStyle(input).display !== 'none' &&
+                                window.getComputedStyle(input).visibility !== 'hidden') {
+                                console.log("找到可見的密碼輸入框:", input);
+                                input.value = password;
+                                input.dispatchEvent(new Event('input', { bubbles: true }));
+                                input.dispatchEvent(new Event('change', { bubbles: true }));
+                                return {
+                                    success: true, 
+                                    element: {
+                                        id: input.id,
+                                        name: input.name,
+                                        placeholder: input.placeholder,
+                                        class: input.className
+                                    }
+                                };
+                            }
+                        }
+                        
+                        // 如果沒找到明確的密碼輸入框，列出所有
+                        const allPasswordInputs = Array.from(passwordInputs).map(input => ({
+                            id: input.id,
+                            name: input.name,
+                            placeholder: input.placeholder,
+                            class: input.className,
+                            visible: window.getComputedStyle(input).display !== 'none' && window.getComputedStyle(input).visibility !== 'hidden'
+                        }));
+                        
+                        return {success: false, allInputs: allPasswordInputs};
+                    }
+                    ''', "a130629925")  # 直接使用密碼
+                    
+                    if js_filled and js_filled.get('success'):
+                        logger.info("已通過JavaScript填入密碼")
+                        logger.info(f"使用的密碼輸入框元素: {js_filled.get('element')}")
+                        password_filled = True
+                    else:
+                        logger.warning("JavaScript未能找到密碼輸入框")
+                        if js_filled and 'allInputs' in js_filled:
+                            logger.debug(f"頁面上的密碼輸入框詳情: {js_filled.get('allInputs')}")
+                except Exception as e:
+                    logger.debug(f"JavaScript填入密碼失敗: {str(e)}")
+            
+            # 如果仍然無法填入密碼，嘗試使用鍵盤Tab跳到密碼輸入框
+            if not password_filled and username_filled:
+                try:
+                    logger.info("嘗試使用Tab鍵跳到密碼輸入框")
+                    await self.page.keyboard.press('Tab')  # 從信箱框跳到密碼框
+                    await asyncio.sleep(0.5)
+                    await self.page.keyboard.type("a130629925", delay=100)  # 慢速輸入密碼
+                    logger.info("已使用鍵盤模擬輸入密碼")
+                    password_filled = True
+                except Exception as e:
+                    logger.debug(f"使用鍵盤Tab跳到密碼輸入框失敗: {str(e)}")
+            
+            # 如果依然失敗，嘗試在表單中直接找密碼輸入框
+            if not password_filled:
+                try:
+                    logger.info("嘗試在表單中直接找密碼輸入框")
+                    form_filled = await self.page.evaluate('''
+                    () => {
+                        const forms = document.querySelectorAll('form');
+                        if (forms.length > 0) {
+                            const passwordInputs = forms[0].querySelectorAll('input[type="password"]');
+                            if (passwordInputs.length > 0) {
+                                passwordInputs[0].value = "a130629925";
+                                passwordInputs[0].dispatchEvent(new Event('input', { bubbles: true }));
+                                passwordInputs[0].dispatchEvent(new Event('change', { bubbles: true }));
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+                    ''')
+                    if form_filled:
+                        logger.info("已在表單中找到並填入密碼")
+                        password_filled = True
+                except Exception as e:
+                    logger.debug(f"在表單中直接找密碼輸入框失敗: {str(e)}")
+            
+            # 添加兩次Tab以保證聚焦到密碼框，然後填入密碼
+            if not password_filled:
+                try:
+                    logger.info("嘗試使用多次Tab來定位密碼框")
+                    await self.page.keyboard.press('Tab')
+                    await asyncio.sleep(0.3)
+                    await self.page.keyboard.press('Tab')
+                    await asyncio.sleep(0.3)
+                    await self.page.keyboard.type("a130629925", delay=100)
+                    logger.info("已使用多次Tab後輸入密碼")
+                    password_filled = True
+                except Exception as e:
+                    logger.debug(f"使用多次Tab定位密碼框失敗: {str(e)}")
+                
+            # 拍攝填入數據後的截圖
+            filled_screenshot = os.path.join(self.config.output_dir, f"login_filled_{int(time.time())}.png")
+            await self.page.screenshot(path=filled_screenshot)
+            logger.info(f"填入數據後的截圖: {filled_screenshot}")
+            
+            # 提交表單，嘗試點擊登入按鈕或按Enter鍵
+            submit_button_clicked = False
+            # 嘗試按Enter鍵提交
+            if username_filled and password_filled:
+                try:
+                    logger.info("嘗試按Enter鍵提交表單")
+                    await self.page.keyboard.press('Enter')
+                    logger.info("已按Enter鍵提交表單")
+                    submit_button_clicked = True
+                    await self.page.wait_for_load_state('networkidle', timeout=15000)
+                except Exception as e:
+                    logger.debug(f"按Enter鍵提交表單失敗: {str(e)}")
+                
+                # 如果Enter鍵提交失敗，嘗試強制提交表單
+                if not submit_button_clicked:
+                    try:
+                        logger.info("嘗試JavaScript強制提交表單")
+                        form_submitted = await self.page.evaluate('''
+                        () => {
+                            const forms = document.querySelectorAll('form');
+                            if (forms.length > 0) {
+                                const form = forms[0];
+                                // 嘗試普通提交
+                                try {
+                                    form.submit();
+                                    return true;
+                                } catch (e) {
+                                    console.error("普通表單提交失敗:", e);
+                                    
+                                    // 嘗試點擊提交按鈕
+                                    const submitButtons = form.querySelectorAll('button[type="submit"], input[type="submit"]');
+                                    if (submitButtons.length > 0) {
+                                        submitButtons[0].click();
+                                        return true;
+                                    }
+                                    
+                                    // 嘗試找任何可能的登入按鈕
+                                    const allButtons = form.querySelectorAll('button');
+                                    for (const button of allButtons) {
+                                        if (button.textContent.includes('登入') || 
+                                            button.textContent.includes('登录') || 
+                                            button.textContent.includes('Login')) {
+                                            button.click();
+                                            return true;
+                                        }
+                                    }
+                                    
+                                    return false;
+                                }
+                            }
+                            return false;
+                        }
+                        ''')
+                        if form_submitted:
+                            logger.info("已通過JavaScript提交表單")
+                            submit_button_clicked = True
+                            await self.page.wait_for_load_state('networkidle', timeout=15000)
+                    except Exception as e:
+                        logger.debug(f"JavaScript強制提交表單失敗: {str(e)}")
+            
+            # 如果自動填寫失敗，則提示用戶手動操作
+            if not username_filled or not password_filled:
+                if not username_filled:
+                    logger.warning("無法找到用戶名輸入框")
+                if not password_filled:
+                    logger.warning("無法找到密碼輸入框")
+                
+                # 尋找iframe並嘗試在iframe中填入
+                logger.info("嘗試在iframe中尋找登入表單")
+                try:
+                    frames = self.page.frames
+                    for frame in frames:
+                        frame_url = frame.url
+                        logger.info(f"檢查iframe: {frame_url}")
+                        
+                        # 嘗試在iframe中填入用戶名
+                        if not username_filled:
+                            for selector in username_selectors:
+                                try:
+                                    username_input = await frame.query_selector(selector)
+                                    if username_input:
+                                        await username_input.fill("")
+                                        await asyncio.sleep(0.5)
+                                        await username_input.fill(self.config.username)
+                                        logger.info(f"已在iframe中填入用戶名: {self.config.username}")
+                                        username_filled = True
+                                        break
+                                except Exception as e:
+                                    logger.debug(f"在iframe中使用選擇器 '{selector}' 填入用戶名失敗: {str(e)}")
+                                    continue
+                        
+                        # 嘗試在iframe中填入密碼
+                        if not password_filled:
+                            for selector in password_selectors:
+                                try:
+                                    password_input = await frame.query_selector(selector)
+                                    if password_input:
+                                        await password_input.fill("")
+                                        await asyncio.sleep(0.5)
+                                        await password_input.fill(self.config.password)
+                                        logger.info("已在iframe中填入密碼")
+                                        password_filled = True
+                                        break
+                                except Exception as e:
+                                    logger.debug(f"在iframe中使用選擇器 '{selector}' 填入密碼失敗: {str(e)}")
+                                    continue
+                        
+                        if username_filled and password_filled:
+                            break
+                except Exception as e:
+                    logger.debug(f"在iframe中尋找登入表單失敗: {str(e)}")
+                
+                # 如果依然無法自動填寫，才讓用戶手動操作
+                if not username_filled or not password_filled:
+                    # 截圖保存
+                    if not username_filled:
+                        username_screenshot = os.path.join(self.config.output_dir, f"username_input_not_found_{int(time.time())}.png")
+                        await self.page.screenshot(path=username_screenshot)
+                        logger.info(f"用戶名輸入框未找到截圖: {username_screenshot}")
+                    
+                    if not password_filled:
+                        password_screenshot = os.path.join(self.config.output_dir, f"password_input_not_found_{int(time.time())}.png")
+                        await self.page.screenshot(path=password_screenshot)
+                        logger.info(f"密碼輸入框未找到截圖: {password_screenshot}")
+                    
+                    # 保存HTML內容以供分析
+                    html_content = await self.page.content()
+                    html_path = os.path.join(self.config.output_dir, f"login_page_{int(time.time())}.html")
+                    with open(html_path, 'w', encoding='utf-8') as f:
+                        f.write(html_content)
+                    logger.info(f"登入頁面HTML已保存至: {html_path}")
+                    
+                    # 提示用戶手動操作
+                    if not username_filled:
+                        user_input = input("無法找到用戶名輸入框，請在瀏覽器中手動輸入用戶名，完成後按Enter繼續...(輸入 'retry' 重新嘗試): ")
+                        if user_input.lower() == 'retry':
+                            logger.info("使用者選擇重新嘗試登入")
+                            return await self.login_to_vip()  # 遞歸嘗試重新登入
+                    
+                    if not password_filled:
+                        user_input = input("無法找到密碼輸入框，請在瀏覽器中手動輸入密碼，完成後按Enter繼續...(輸入 'retry' 重新嘗試): ")
+                        if user_input.lower() == 'retry':
+                            logger.info("使用者選擇重新嘗試登入")
+                            return await self.login_to_vip()  # 遞歸嘗試重新登入
+            
+            # 處理驗證碼 (如果有)
+            await self.handle_captcha(self.page)
+            
+            # 點擊登入按鈕提交表單
+            submit_button_selectors = [
+                'button[type="submit"]',
+                'input[type="submit"]',
+                'button:has-text("登入")',
+                'button:text("登入")',
+                '.login-submit',
+                '.btn-login',
+                '#submit',
+                '#login-button'
+            ]
+            
+            submit_button_clicked = False
+            for selector in submit_button_selectors:
+                try:
+                    submit_button = await self.page.query_selector(selector)
+                    if submit_button:
+                        # 有些網站可能需要先確保按鈕可見
+                        await submit_button.scroll_into_view_if_needed()
+                        await asyncio.sleep(0.5)
+                        
+                        # 嘗試點擊提交按鈕
+                        await submit_button.click()
+                        logger.info(f"已點擊登入提交按鈕: {selector}")
+                        submit_button_clicked = True
+                        
+                        # 等待頁面加載
+                        await self.page.wait_for_load_state('networkidle', timeout=15000)
+                        break
+                except Exception as e:
+                    logger.debug(f"使用選擇器 '{selector}' 點擊登入提交按鈕失敗: {str(e)}")
+                    continue
+            
+            # 如果沒有找到提交按鈕，嘗試用Enter鍵提交
+            if not submit_button_clicked:
+                try:
+                    # 嘗試在密碼框按Enter
+                    for selector in password_selectors:
+                        try:
+                            await self.page.press(selector, 'Enter')
+                            logger.info(f"已在密碼輸入框使用Enter鍵提交登入表單: {selector}")
+                            submit_button_clicked = True
+                            
+                            # 等待頁面加載
+                            await self.page.wait_for_load_state('networkidle', timeout=15000)
+                            break
+                        except Exception as e:
+                            logger.debug(f"在密碼輸入框 '{selector}' 使用Enter鍵提交失敗: {str(e)}")
+                            continue
+                except Exception as e:
+                    logger.warning(f"使用Enter鍵提交登入表單失敗: {str(e)}")
+            
+            # 如果依然無法提交，讓用戶手動操作
+            if not submit_button_clicked:
+                logger.warning("無法自動提交登入表單")
+                # 截圖保存
+                submit_screenshot = os.path.join(self.config.output_dir, f"login_submit_not_found_{int(time.time())}.png")
+                await self.page.screenshot(path=submit_screenshot)
+                logger.info(f"登入提交按鈕未找到截圖: {submit_screenshot}")
+                
+                # 提示用戶手動操作
+                user_input = input("無法自動提交登入表單，請在瀏覽器中手動點擊登入按鈕，完成後按Enter繼續...(輸入 'retry' 重新嘗試): ")
+                if user_input.lower() == 'retry':
+                    logger.info("使用者選擇重新嘗試登入")
+                    return await self.login_to_vip()  # 遞歸嘗試重新登入
+            
+            # 等待頁面加載完成
+            await asyncio.sleep(3)
+            await self.page.wait_for_load_state('networkidle', timeout=15000)
+            
+            # 檢查登入是否成功 - 檢查URL和頁面內容
+            current_url = self.page.url
+            
+            # 檢查是否處於重複登入頁面
+            repeat_login_page = await self.handle_repeat_login_page(self.page)
+            if repeat_login_page:
+                logger.info("處理了重複登入頁面")
+                
+                # 等待頁面加載完成
+                await asyncio.sleep(2)
+                await self.page.wait_for_load_state('networkidle', timeout=10000)
+                
+                # 更新當前URL
+                current_url = self.page.url
+            
+            # 檢查是否在VIP頁面上
+            login_success = 'vip.104.com' in current_url and ('/company' in current_url or '/index/index' in current_url)
+            
+            # 額外檢查是否有錯誤消息或仍在登入頁面
+            if not login_success:
+                # 檢查是否有錯誤消息
+                error_selectors = [
+                    '.error-message',
+                    '.alert-danger',
+                    '.login-error',
+                    '[role="alert"]',
+                    '.form-error'
+                ]
+                
+                error_detected = False
+                for selector in error_selectors:
+                    try:
+                        error_elem = await self.page.query_selector(selector)
+                        if error_elem:
+                            error_text = await error_elem.text_content()
+                            logger.error(f"登入錯誤: {error_text}")
+                            error_detected = True
+                            break
+                    except Exception as e:
+                        logger.debug(f"檢查錯誤消息 '{selector}' 失敗: {str(e)}")
+                        continue
+                
+                # 如果檢測到錯誤或仍在登入頁面
+                if error_detected or 'login' in current_url:
+                    logger.warning("登入可能失敗")
+                    
+                    # 截圖保存
+                    login_failed_screenshot = os.path.join(self.config.output_dir, f"login_failed_{int(time.time())}.png")
+                    await self.page.screenshot(path=login_failed_screenshot)
+                    logger.info(f"登入失敗頁面截圖: {login_failed_screenshot}")
+                    
+                    # 提示用戶處理
+                    user_decision = input("登入可能失敗，請選擇:\n1. 手動在瀏覽器中完成登入\n2. 重試自動登入\n3. 放棄登入\n請輸入選項(1/2/3): ")
+                    
+                    if user_decision == '1':
+                        user_input = input("請在瀏覽器中手動完成登入，完成後按Enter繼續...")
+                        # 等待頁面加載
+                        await self.page.wait_for_load_state('networkidle', timeout=10000)
+                        
+                        # 更新當前URL檢查是否登入成功
+                        current_url = self.page.url
+                        login_success = 'vip.104.com' in current_url and ('/company' in current_url or '/index/index' in current_url)
+                    elif user_decision == '2':
+                        logger.info("使用者選擇重新嘗試登入")
+                        return await self.login_to_vip()  # 遞歸嘗試重新登入
+                    else:
+                        logger.warning("使用者選擇放棄登入")
+                        return False
+            
+            # 最終檢查登入是否成功
+            if not login_success:
+                logger.warning("登入失敗 - 當前URL不是VIP公司頁面")
+                return False
+            
+            logger.info("登入104 VIP系統成功")
+            return True
+        except Exception as e:
+            logger.error(f"登入過程中發生錯誤: {str(e)}")
+            # 截圖保存錯誤頁面
+            try:
+                error_screenshot = os.path.join(self.config.output_dir, f"login_error_{int(time.time())}.png")
+                await self.page.screenshot(path=error_screenshot)
+                logger.info(f"登入錯誤截圖: {error_screenshot}")
+                
+                # 保存當前頁面HTML
+                html_content = await self.page.content()
+                error_html_path = os.path.join(self.config.output_dir, f"login_error_page_{int(time.time())}.html")
+                with open(error_html_path, 'w', encoding='utf-8') as f:
+                    f.write(html_content)
+                logger.info(f"登入錯誤頁面HTML已保存至: {error_html_path}")
+                
+                # 詢問用戶如何處理
+                user_decision = input("登入過程中發生錯誤，請選擇:\n1. 手動在瀏覽器中完成登入\n2. 重試自動登入\n3. 放棄登入\n請輸入選項(1/2/3): ")
+                
+                if user_decision == '1':
+                    user_input = input("請在瀏覽器中手動完成登入，完成後按Enter繼續...")
+                    await self.page.wait_for_load_state('networkidle')
+                    return True  # 假設用戶已成功登入
+                elif user_decision == '2':
+                    logger.info("重試自動登入流程")
+                    return await self.login_to_vip()  # 遞歸重試
+                else:
+                    logger.info("使用者選擇放棄登入")
+                    return False
+            except Exception as screenshot_error:
+                logger.error(f"保存錯誤截圖和HTML時出錯: {str(screenshot_error)}")
+                return False
+
+    async def handle_captcha(self, page):
+        """處理各種驗證碼，包括郵箱驗證碼和圖形驗證碼"""
+        try:
+            captcha_element = None
+            email_verification_code_detected = False
+            
+            # 截圖用於手動分析
+            debug_screenshot = os.path.join(self.config.output_dir, f"debug_captcha_page_{int(time.time())}.png")
+            await page.screenshot(path=debug_screenshot)
+            logger.info(f"驗證碼頁面分析截圖: {debug_screenshot}")
+            
+            # 保存HTML內容用於分析
+            html_content = await page.content()
+            debug_html_path = os.path.join(self.config.output_dir, f"debug_captcha_page_{int(time.time())}.html")
+            with open(debug_html_path, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+            logger.info(f"驗證碼頁面HTML已保存: {debug_html_path}")
+            
+            # 檢查URL是否包含驗證相關關鍵字
+            current_url = page.url
+            logger.info(f"當前頁面URL: {current_url}")
+            if any(keyword in current_url for keyword in ['verify', 'auth', 'captcha', 'validation']):
+                logger.info("從URL檢測到可能是驗證頁面")
+                email_verification_code_detected = True
+            
+            # 強制檢查頁面文字內容來確定是否為驗證碼頁面
+            page_text = await page.evaluate('() => document.body.innerText')
+            email_verification_keywords = [
+                "信箱驗證", 
+                "電子郵件驗證", 
+                "驗證信已寄出", 
+                "請查收您的電子郵件",
+                "驗證信",
+                "驗證碼",
+                "verification code",
+                "email verification",
+                "驗證您的身份",
+                "verify your identity",
+                "請輸入驗證碼"
+            ]
+            
+            if any(keyword in page_text for keyword in email_verification_keywords):
+                logger.info(f"從頁面文字中檢測到驗證相關內容: {[k for k in email_verification_keywords if k in page_text]}")
+                email_verification_code_detected = True
+            
+            # 檢查是否是信箱驗證碼頁面
+            email_verification_selectors = [
+                'input[placeholder*="請輸入信箱驗證碼"]',
+                'input[placeholder*="email verification"]',
+                'input[id*="email_code"]',
+                'input[name*="email_code"]',
+                'input[name*="verf_code"]',
+                'input[id*="emailVerification"]',
+                'input[name*="emailVerification"]',
+                'input[placeholder*="驗證碼"]',
+                'input[placeholder*="請輸入驗證碼"]',
+                'input[aria-label*="驗證碼"]',
+                # 更通用的選擇器
+                'input[type="text"]',
+                'input[type="number"]',
+                'input:not([type])',
+                'input.code-input',
+                'input.verification-input',
+                '.verification-code-input input'
+            ]
+            
+            # 一般圖形驗證碼選擇器
+            captcha_selectors = [
+                'input[name="captcha"]',
+                'input[placeholder*="驗證碼"]',
+                'input[id*="captcha"]',
+                'input[name*="verif"]',
+                'input[placeholder*="verification"]',
+                'input[id*="verif"]',
+                '.captcha-input',
+                '#captchaImage'  # 如果驗證碼圖片存在，則可能需要輸入
+            ]
+            
+            # 嘗試找出是否有信箱驗證碼輸入框
+            for selector in email_verification_selectors:
+                try:
+                    logger.info(f"檢查信箱驗證碼輸入框: {selector}")
+                    email_code_element = await page.query_selector(selector)
+                    if email_code_element:
+                        captcha_element = email_code_element
+                        email_verification_code_detected = True
+                        logger.info(f"檢測到信箱驗證碼輸入框: {selector}")
+                        break
+                except Exception as e:
+                    logger.debug(f"檢查信箱驗證碼輸入框失敗 {selector}: {str(e)}")
+                    continue
+            
+            # 檢查iframe中是否有驗證碼輸入框
+            if not captcha_element:
+                try:
+                    logger.info("檢查iframe中是否有驗證碼輸入框")
+                    frames = page.frames
+                    for frame in frames:
+                        if frame != page.main_frame:
+                            logger.info(f"檢查iframe: {frame.url}")
+                            for selector in email_verification_selectors + captcha_selectors:
+                                try:
+                                    frame_element = await frame.query_selector(selector)
+                                    if frame_element:
+                                        logger.info(f"在iframe中找到驗證碼輸入框: {selector}")
+                                        # 無法直接操作iframe中的元素，但可以確認其存在
+                                        email_verification_code_detected = True
+                                        break
+                                except Exception as e:
+                                    logger.debug(f"檢查iframe中的選擇器 {selector} 失敗: {str(e)}")
+                except Exception as e:
+                    logger.debug(f"檢查iframe失敗: {str(e)}")
+            
+            # 使用JavaScript尋找可能的驗證碼輸入框
+            if not captcha_element:
+                try:
+                    logger.info("使用JavaScript尋找可能的驗證碼輸入框")
+                    js_detection_result = await page.evaluate('''() => {
+                        // 尋找所有可能的輸入框
+                        const allInputs = Array.from(document.querySelectorAll('input'));
+                        
+                        // 找到可能是驗證碼輸入框的元素
+                        const potentialCaptchaInputs = allInputs.filter(input => {
+                            // 檢查input標籤的各種屬性
+                            const placeholder = (input.placeholder || "").toLowerCase();
+                            const id = (input.id || "").toLowerCase();
+                            const name = (input.name || "").toLowerCase();
+                            const type = (input.type || "").toLowerCase();
+                            const classList = Array.from(input.classList).join(" ").toLowerCase();
+                            
+                            // 驗證碼輸入框的特徵
+                            return (
+                                placeholder.includes("驗證") || 
+                                placeholder.includes("code") ||
+                                placeholder.includes("verification") ||
+                                id.includes("code") || 
+                                id.includes("verification") || 
+                                id.includes("captcha") ||
+                                id.includes("verify") ||
+                                name.includes("code") || 
+                                name.includes("verification") || 
+                                name.includes("captcha") ||
+                                name.includes("verify") ||
+                                classList.includes("code") ||
+                                classList.includes("verification") ||
+                                classList.includes("captcha") ||
+                                (type === "number" && input.maxLength > 0 && input.maxLength <= 8) ||
+                                // 很多驗證碼輸入框是短的數字輸入框
+                                (input.maxLength > 0 && input.maxLength <= 8 && 
+                                 (type === "text" || type === "number" || type === "tel"))
+                            );
+                        });
+                        
+                        // 返回找到的潛在驗證碼輸入框信息
+                        if (potentialCaptchaInputs.length > 0) {
+                            return {
+                                found: true,
+                                details: potentialCaptchaInputs.map(input => ({
+                                    id: input.id,
+                                    name: input.name,
+                                    type: input.type,
+                                    placeholder: input.placeholder,
+                                    class: Array.from(input.classList).join(' '),
+                                    maxLength: input.maxLength
+                                }))
+                            };
+                        }
+                        return { found: false };
+                    }''')
+                    
+                    if js_detection_result.get('found'):
+                        logger.info(f"JavaScript找到潛在的驗證碼輸入框: {js_detection_result.get('details')}")
+                        email_verification_code_detected = True
+                        
+                        # 嘗試通過ID或name找到元素
+                        for detail in js_detection_result.get('details', []):
+                            input_id = detail.get('id')
+                            input_name = detail.get('name')
+                            
+                            if input_id:
+                                try:
+                                    element = await page.query_selector(f'#{input_id}')
+                                    if element:
+                                        captcha_element = element
+                                        logger.info(f"找到驗證碼輸入框ID: #{input_id}")
+                                        break
+                                except Exception as e:
+                                    logger.debug(f"通過ID #{input_id} 查找輸入框失敗: {str(e)}")
+                            
+                            if input_name and not captcha_element:
+                                try:
+                                    element = await page.query_selector(f'input[name="{input_name}"]')
+                                    if element:
+                                        captcha_element = element
+                                        logger.info(f"找到驗證碼輸入框name: {input_name}")
+                                        break
+                                except Exception as e:
+                                    logger.debug(f"通過name {input_name} 查找輸入框失敗: {str(e)}")
+                except Exception as e:
+                    logger.debug(f"JavaScript驗證碼輸入框檢測失敗: {str(e)}")
+            
+            # 如果前面的選擇器都沒找到，但判斷出是驗證碼頁面，則強制執行信箱驗證碼流程
+            if email_verification_code_detected:
+                logger.info("=" * 50)
+                logger.info("系統已傳送驗證碼到你的信箱")
+                logger.info("請檢查您的電子郵件，包括垃圾郵件夾")
+                logger.info("=" * 50)
+                
+                # 顯示倒數計時器，讓用戶有時間查收郵件
+                wait_time = 5  # 修改為5秒倒數
+                logger.info(f"等待 {wait_time} 秒以便您查收郵件...")
+                
+                for i in range(wait_time, 0, -1):
+                    print(f"\r剩餘等待時間: {i} 秒...", end="", flush=True)
+                    time.sleep(1)
+                
+                print("\r", end="")
+                print("\n" + "=" * 50)
+                print("請輸入您收到的信箱驗證碼")
+                print("如果尚未收到，請檢查垃圾郵件夾")
+                print("如需重新發送驗證碼，請在瀏覽器中點擊重新發送按鈕")
+                print("=" * 50 + "\n")
+                
+                verification_code = input("請輸入信箱驗證碼 (或輸入 'manual' 進行手動操作): ").strip()
+                
+                if verification_code.lower() == 'manual':
+                    logger.info("使用者選擇手動操作")
+                    user_input = input("請在瀏覽器中手動完成驗證碼輸入，完成後按Enter繼續...")
+                    # 等待用戶手動操作
+                    await page.wait_for_load_state('networkidle', timeout=15000)
+                    return True
+                
+                logger.info(f"使用者輸入信箱驗證碼: {verification_code}")
+                
+                # 如果找到了輸入框，填入驗證碼
+                if captcha_element:
+                    try:
+                        await captcha_element.fill("")  # 先清空輸入框
+                        await asyncio.sleep(0.5)
+                        await captcha_element.fill(verification_code)
+                        logger.info("已填入信箱驗證碼")
+                    except Exception as e:
+                        logger.error(f"填入驗證碼失敗: {str(e)}")
+                        
+                        # 嘗試使用JS填入
+                        try:
+                            await page.evaluate(f'''(code) => {{
+                                // 嘗試找到所有可能的驗證碼輸入框
+                                const allInputs = Array.from(document.querySelectorAll('input'));
+                                const potentialInputs = allInputs.filter(input => {{
+                                    // 檢查input標籤的各種屬性
+                                    const placeholder = (input.placeholder || "").toLowerCase();
+                                    const id = (input.id || "").toLowerCase();
+                                    const name = (input.name || "").toLowerCase();
+                                    const classList = Array.from(input.classList).join(" ").toLowerCase();
+                                    
+                                    return (
+                                        placeholder.includes("驗證") || 
+                                        placeholder.includes("code") ||
+                                        id.includes("code") || 
+                                        id.includes("verification") || 
+                                        id.includes("captcha") ||
+                                        name.includes("code") || 
+                                        name.includes("verification") || 
+                                        name.includes("captcha") ||
+                                        classList.includes("code") ||
+                                        classList.includes("verification") ||
+                                        classList.includes("captcha") ||
+                                        (input.type === "number" && input.maxLength > 0 && input.maxLength <= 8)
+                                    );
+                                }});
+                                
+                                let filled = false;
+                                
+                                if (potentialInputs.length > 0) {{
+                                    // 填入所有可能的輸入框
+                                    potentialInputs.forEach(input => {{
+                                        input.value = "{verification_code}";
+                                        input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                        input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                                    }});
+                                    filled = true;
+                                    
+                                    // 嘗試在最後一個輸入框上觸發Enter事件
+                                    const lastInput = potentialInputs[potentialInputs.length - 1];
+                                    const enterEvent = new KeyboardEvent('keydown', {{
+                                        key: 'Enter',
+                                        code: 'Enter',
+                                        keyCode: 13,
+                                        which: 13,
+                                        bubbles: true
+                                    }});
+                                    lastInput.dispatchEvent(enterEvent);
+                                    
+                                    // 嘗試提交包含該輸入框的表單
+                                    if (lastInput.form) {{
+                                        lastInput.form.submit();
+                                    }}
+                                }}
+                                
+                                // 嘗試所有短的輸入框
+                                if (!filled) {{
+                                    const shortInputs = allInputs.filter(input => 
+                                        (input.maxLength > 0 && input.maxLength <= 8) || 
+                                        input.type === "number" || 
+                                        input.type === "tel"
+                                    );
+                                    
+                                    if (shortInputs.length > 0) {{
+                                        shortInputs.forEach(input => {{
+                                            input.value = "{verification_code}";
+                                            input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                            input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                                        }});
+                                        filled = true;
+                                        
+                                        // 嘗試在最後一個輸入框上觸發Enter事件
+                                        const lastInput = shortInputs[shortInputs.length - 1];
+                                        const enterEvent = new KeyboardEvent('keydown', {{
+                                            key: 'Enter',
+                                            code: 'Enter',
+                                            keyCode: 13,
+                                            which: 13,
+                                            bubbles: true
+                                        }});
+                                        lastInput.dispatchEvent(enterEvent);
+                                        
+                                        // 嘗試提交包含該輸入框的表單
+                                        if (lastInput.form) {{
+                                            lastInput.form.submit();
+                                        }}
+                                    }}
+                                }}
+                                
+                                // 嘗試自動點擊提交按鈕
+                                if (filled) {{
+                                    // 明確的確認按鈕文字
+                                    const confirmButtonTexts = ["確認", "提交", "驗證", "送出", "下一步", "Next", "Submit", "OK", "Confirm"];
+                                    
+                                    // 重新發送驗證碼按鈕可能的文字（要避開這些）
+                                    const resendButtonTexts = ["重新發送", "重發", "重新傳送", "resend", "send again", "重發驗證信"];
+                                    
+                                    // 尋找確認按鈕，但排除重新發送按鈕
+                                    const buttons = Array.from(document.querySelectorAll('button, input[type="submit"], .btn, [role="button"]'));
+                                    
+                                    // 先檢查是否有明確的「確認」按鈕
+                                    const confirmButton = buttons.find(btn => {{
+                                        const text = btn.innerText || btn.value || '';
+                                        return text === "確認" || text === "提交" || text === "送出";
+                                    }});
+                                    
+                                    if (confirmButton) {{
+                                        console.log("找到明確的確認按鈕: " + confirmButton.innerText);
+                                        confirmButton.click();
+                                        return true;
+                                    }}
+                                    
+                                    // 如果沒有明確的確認按鈕，尋找包含確認文字同時不包含重發文字的按鈕
+                                    for (const btn of buttons) {{
+                                        const text = btn.innerText || btn.value || '';
+                                        // 檢查按鈕文字，確保是確認類按鈕而非重新發送按鈕
+                                        if (text && confirmButtonTexts.some(confirmText => text.includes(confirmText)) && 
+                                            !resendButtonTexts.some(resendText => text.includes(resendText))) {{
+                                            console.log("點擊確認按鈕: " + text);
+                                            btn.click();
+                                            return true;
+                                        }}
+                                    }}
+                                    
+                                    // 嘗試找主要提交按鈕，但排除包含重發文字的按鈕
+                                    const submitButtons = buttons.filter(btn => {{
+                                        const text = btn.innerText || btn.value || '';
+                                        return (btn.type === "submit" || 
+                                               btn.classList.contains('btn-primary') || 
+                                               btn.getAttribute('data-btn-type') === 'primary') &&
+                                               !resendButtonTexts.some(resendText => text.includes(resendText));
+                                    }});
+                                    
+                                    if (submitButtons.length > 0) {{
+                                        console.log("點擊主要提交按鈕");
+                                        submitButtons[0].click();
+                                        return true;
+                                    }}
+                                    
+                                    // 如果無法找到合適的按鈕，返回true但不做提交，避免錯誤點擊
+                                    console.log("未找到合適的提交按鈕，僅填入驗證碼但不自動提交");
+                                    return true;
+                                }}
+                                
+                                return filled;
+                            }}''')
+                            logger.info("已使用JavaScript填入驗證碼並嘗試自動提交")
+                            submit_clicked = True  # 標記已嘗試提交，跳過後續搜索按鈕的步驟
+                        except Exception as js_error:
+                            logger.error(f"使用JavaScript填入驗證碼失敗: {str(js_error)}")
+                            user_input = input("請在瀏覽器中手動填入驗證碼，完成後按Enter繼續...")
+                else:
+                    # 如果未找到輸入框但確認是驗證碼頁面
+                    logger.warning("未找到驗證碼輸入框，嘗試使用JavaScript填入")
+                    try:
+                        js_input_success = await page.evaluate(f'''(code) => {{
+                            // 嘗試找到所有可能的輸入框
+                            const allInputs = Array.from(document.querySelectorAll('input'));
+                            
+                            // 先嘗試所有可能的驗證碼輸入框
+                            const potentialInputs = allInputs.filter(input => {{
+                                const placeholder = (input.placeholder || "").toLowerCase();
+                                const id = (input.id || "").toLowerCase();
+                                const name = (input.name || "").toLowerCase();
+                                const classList = Array.from(input.classList).join(" ").toLowerCase();
+                                const type = (input.type || "").toLowerCase();
+                                
+                                return (
+                                    placeholder.includes("驗證") || 
+                                    placeholder.includes("code") ||
+                                    placeholder.includes("verification") ||
+                                    id.includes("code") || 
+                                    id.includes("verification") || 
+                                    id.includes("captcha") ||
+                                    id.includes("verify") ||
+                                    name.includes("code") || 
+                                    name.includes("verification") || 
+                                    name.includes("captcha") ||
+                                    name.includes("verify") ||
+                                    classList.includes("code") ||
+                                    classList.includes("verification") ||
+                                    classList.includes("captcha") ||
+                                    (type === "number" && input.maxLength > 0 && input.maxLength <= 8) ||
+                                    (input.maxLength > 0 && input.maxLength <= 8)
+                                );
+                            }});
+                            
+                            let filled = false;
+                            
+                            if (potentialInputs.length > 0) {{
+                                potentialInputs.forEach(input => {{
+                                    input.value = "{verification_code}";
+                                    input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                    input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                                }});
+                                filled = true;
+                                
+                                // 嘗試在最後一個輸入框上觸發Enter事件
+                                const lastInput = potentialInputs[potentialInputs.length - 1];
+                                const enterEvent = new KeyboardEvent('keydown', {{
+                                    key: 'Enter',
+                                    code: 'Enter',
+                                    keyCode: 13,
+                                    which: 13,
+                                    bubbles: true
+                                }});
+                                lastInput.dispatchEvent(enterEvent);
+                                
+                                // 嘗試提交包含該輸入框的表單
+                                if (lastInput.form) {{
+                                    lastInput.form.submit();
+                                }}
+                            }}
+                            
+                            // 如果沒找到明確的驗證碼輸入框，嘗試頁面上的所有短輸入框
+                            if (!filled) {{
+                                const shortInputs = allInputs.filter(input => 
+                                    (input.maxLength > 0 && input.maxLength <= 8) ||
+                                    input.type === "number" ||
+                                    input.type === "tel"
+                                );
+                                
+                                if (shortInputs.length > 0) {{
+                                    shortInputs.forEach(input => {{
+                                        input.value = "{verification_code}";
+                                        input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                        input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                                    }});
+                                    filled = true;
+                                    
+                                    // 嘗試在最後一個輸入框上觸發Enter事件
+                                    const lastInput = shortInputs[shortInputs.length - 1];
+                                    const enterEvent = new KeyboardEvent('keydown', {{
+                                        key: 'Enter',
+                                        code: 'Enter',
+                                        keyCode: 13,
+                                        which: 13,
+                                        bubbles: true
+                                    }});
+                                    lastInput.dispatchEvent(enterEvent);
+                                    
+                                    // 嘗試提交包含該輸入框的表單
+                                    if (lastInput.form) {{
+                                        lastInput.form.submit();
+                                    }}
+                                }}
+                            }}
+                            
+                            // 最後嘗試所有可見的文本輸入框
+                            if (!filled) {{
+                                const visibleTextInputs = allInputs.filter(input => 
+                                    (input.type === "text" || !input.type) && 
+                                    input.offsetWidth > 0 && 
+                                    input.offsetHeight > 0 &&
+                                    window.getComputedStyle(input).display !== 'none'
+                                );
+                                
+                                if (visibleTextInputs.length > 0) {{
+                                    visibleTextInputs.forEach(input => {{
+                                        input.value = "{verification_code}";
+                                        input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                        input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                                    }});
+                                    filled = true;
+                                    
+                                    // 嘗試在最後一個輸入框上觸發Enter事件
+                                    const lastInput = visibleTextInputs[visibleTextInputs.length - 1];
+                                    const enterEvent = new KeyboardEvent('keydown', {{
+                                        key: 'Enter',
+                                        code: 'Enter',
+                                        keyCode: 13,
+                                        which: 13,
+                                        bubbles: true
+                                    }});
+                                    lastInput.dispatchEvent(enterEvent);
+                                    
+                                    // 嘗試提交包含該輸入框的表單
+                                    if (lastInput.form) {{
+                                        lastInput.form.submit();
+                                    }}
+                                }}
+                            }}
+                            
+                            // 嘗試自動點擊提交按鈕
+                            if (filled) {{
+                                // 明確的確認按鈕文字 
+                                const confirmButtonTexts = ["確認", "提交", "驗證", "送出", "下一步", "Next", "Submit", "OK", "Confirm"];
+                                
+                                // 重新發送驗證碼按鈕可能的文字（要避開這些）
+                                const resendButtonTexts = ["重新發送", "重發", "重新傳送", "resend", "send again", "重發驗證信"];
+
+                                // 嘗試找主要按鈕
+                                const primaryBtn = document.querySelector('.btn-primary, [type="submit"], [data-btn-type="primary"]');
+                                if (primaryBtn) {{
+                                    primaryBtn.click();
+                                    console.log("自動點擊了主要按鈕");
+                                }}
+                            }}
+                            
+                            return filled;
+                        }}''')
+                        
+                        if js_input_success:
+                            logger.info("已使用JavaScript成功填入驗證碼並嘗試自動提交")
+                            submit_clicked = True  # 標記已嘗試提交，跳過後續搜索按鈕的步驟
+                        else:
+                            logger.warning("無法找到合適的輸入框填入驗證碼")
+                            user_input = input("請在瀏覽器中手動填入驗證碼，完成後按Enter繼續...")
+                    except Exception as e:
+                        logger.error(f"使用JavaScript填入驗證碼失敗: {str(e)}")
+                        user_input = input("請在瀏覽器中手動填入驗證碼，完成後按Enter繼續...")
+                
+                # 只有在尚未自動提交時才嘗試點擊提交按鈕
+                if not submit_clicked:
+                    # 嘗試點擊提交按鈕
+                    submit_button_selectors = [
+                        'button:has-text("確認")',
+                        'button:has-text("提交")',
+                        'button:has-text("驗證")',
+                        'button:has-text("送出")',
+                        'button:has-text("下一步")',
+                        'button[type="submit"]',
+                        'input[type="submit"]',
+                        '.btn-primary',
+                        '.submit-button',
+                        'button.btn',
+                        'button[data-btn-type="primary"]'
+                    ]
+                    
+                    # 這裡不重置submit_clicked狀態
+                    for selector in submit_button_selectors:
+                        try:
+                            logger.info(f"嘗試尋找提交按鈕: {selector}")
+                            await page.wait_for_selector(selector, timeout=3000, state="visible")
+                            submit_btn = await page.query_selector(selector)
+                            if submit_btn:
+                                await submit_btn.click()
+                                logger.info(f"已點擊驗證碼提交按鈕: {selector}")
+                                submit_clicked = True
+                                break
+                        except Exception as e:
+                            logger.debug(f"使用選擇器 '{selector}' 點擊提交按鈕失敗: {str(e)}")
+                            continue
+                    
+                    # 如果沒有找到提交按鈕，嘗試使用JS點擊
+                    if not submit_clicked:
+                        try:
+                            logger.info("嘗試使用JavaScript尋找並點擊提交按鈕")
+                            js_button_clicked = await page.evaluate('''() => {
+                                const buttonTexts = ["確認", "提交", "驗證", "送出", "下一步", "Next", "Submit", "OK", "Confirm"];
+                                
+                                // 嘗試找到包含指定文字的按鈕
+                                const buttons = Array.from(document.querySelectorAll('button, input[type="submit"], .btn'));
+                                for (const btn of buttons) {
+                                    if (btn.innerText && buttonTexts.some(text => btn.innerText.includes(text))) {
+                                        btn.click();
+                                        console.log("點擊了按鈕: " + btn.innerText);
+                                        return true;
+                                    }
+                                }
+                                
+                                // 嘗試找主要按鈕
+                                const primaryBtn = document.querySelector('.btn-primary, [type="submit"], [data-btn-type="primary"]');
+                                if (primaryBtn) {
+                                    primaryBtn.click();
+                                    console.log("點擊了主要按鈕");
+                                    return true;
+                                }
+                                
+                                // 嘗試找任何可能是提交按鈕的元素
+                                const allElements = Array.from(document.querySelectorAll('*'));
+                                const potentialButtons = allElements.filter(el => {
+                                    const style = window.getComputedStyle(el);
+                                    const text = el.innerText || '';
+                                    return (
+                                        style.cursor === 'pointer' && 
+                                        style.display !== 'none' &&
+                                        (el.onclick || el.tagName === 'BUTTON' || 
+                                         el.classList.contains('btn') || 
+                                         buttonTexts.some(btn => text.includes(btn)))
+                                    );
+                                });
+                                
+                                if (potentialButtons.length > 0) {
+                                    // 優先選擇有文字的按鈕
+                                    const textButtons = potentialButtons.filter(btn => btn.innerText && btn.innerText.trim());
+                                    if (textButtons.length > 0) {
+                                        textButtons[0].click();
+                                        console.log("點擊了文字按鈕: " + textButtons[0].innerText);
+                                        return true;
+                                    }
+                                    
+                                    // 如果沒有帶文字的按鈕，選擇第一個
+                                    potentialButtons[0].click();
+                                    console.log("點擊了可能的按鈕");
+                                    return true;
+                                }
+                                
+                                return false;
+                            }''')
+                            
+                            if js_button_clicked:
+                                logger.info("已使用JavaScript點擊提交按鈕")
+                                submit_clicked = True
+                            else:
+                                logger.warning("無法使用JavaScript找到並點擊提交按鈕")
+                        except Exception as e:
+                            logger.debug(f"使用JavaScript點擊提交按鈕失敗: {str(e)}")
+                    
+                    # 如果仍然無法提交，嘗試按Enter鍵
+                    if not submit_clicked:
+                        logger.warning("無法找到驗證碼提交按鈕，嘗試按Enter提交")
+                        try:
+                            if captcha_element:
+                                await captcha_element.press('Enter')
+                                logger.info("已使用Enter鍵提交驗證碼")
+                                submit_clicked = True
+                            else:
+                                await page.keyboard.press('Enter')
+                                logger.info("已使用全局Enter鍵提交驗證碼")
+                                submit_clicked = True
+                        except Exception as e:
+                            logger.warning(f"無法使用Enter鍵提交驗證碼: {str(e)}")
+                            user_input = input("請在瀏覽器中手動提交驗證碼，完成後按Enter繼續...")
+                    
+                    # 如果所有自動方法都失敗，讓用戶手動提交
+                    if not submit_clicked:
+                        logger.warning("所有自動提交方法都失敗，請手動提交驗證碼")
+                        user_input = input("請在瀏覽器中手動點擊提交按鈕，完成後按Enter繼續...")
+                
+                # 無論是自動JS提交還是手動點擊提交，都需要等待驗證碼處理完成
+                logger.info("等待系統處理驗證碼...")
+                await asyncio.sleep(1)  # 將等待時間從3秒減少到1秒
+                await page.wait_for_load_state('networkidle', timeout=10000)
+                
+                # 檢查驗證碼是否正確
+                error_selectors = ['.error-message', '.alert-danger', '.error', '[role="alert"]', '.invalid-feedback']
+                captcha_error = False
+                
+                for selector in error_selectors:
+                    try:
+                        error_elem = await page.query_selector(selector)
+                        if error_elem:
+                            error_text = await error_elem.text_content()
+                            if any(keyword in error_text for keyword in ["驗證碼", "驗證", "錯誤", "無效", "invalid", "incorrect"]):
+                                captcha_error = True
+                                logger.error(f"驗證碼錯誤: {error_text}")
+                                break
+                    except Exception as e:
+                        logger.debug(f"檢查驗證碼錯誤提示 '{selector}' 失敗: {str(e)}")
+                        continue
+                
+                # 再次檢查是否有驗證碼輸入框，如果還存在說明需要重新輸入
+                still_on_captcha_page = False
+                
+                # 檢查URL是否改變
+                current_url_after = page.url
+                if current_url == current_url_after:
+                    # 重新檢查頁面文字
+                    try:
+                        page_text_after = await page.evaluate('() => document.body.innerText')
+                        if any(keyword in page_text_after for keyword in email_verification_keywords):
+                            logger.warning("頁面仍然包含驗證相關內容，可能需要重新輸入驗證碼")
+                            still_on_captcha_page = True
+                    except Exception as e:
+                        logger.debug(f"重新檢查頁面文字失敗: {str(e)}")
+                
+                if captcha_error or still_on_captcha_page:
+                    logger.warning("驗證碼可能錯誤或未正確提交，需要重新輸入")
+                    
+                    # 再次嘗試
+                    retry_captcha = input("驗證碼可能錯誤，是否要重新輸入? (y/n): ").strip().lower()
+                    if retry_captcha == 'y':
+                        logger.info("使用者選擇重新輸入驗證碼")
+                        return await self.handle_captcha(page)  # 遞歸重試驗證碼
+                    else:
+                        user_action = input("請在瀏覽器中手動完成驗證碼輸入，完成後按Enter繼續...")
+                
+                logger.info("驗證碼處理完成")
+                return True
+            else:
+                logger.info("未偵測到驗證碼輸入框或驗證相關內容，繼續操作")
+                return False
+                
+        except Exception as e:
+            logger.error(f"處理驗證碼時發生錯誤: {str(e)}")
+            
+            # 截圖保存錯誤頁面
+            try:
+                # 截圖並保存HTML
+                screenshot_path = os.path.join(self.config.output_dir, f"captcha_error_{int(time.time())}.png")
+                await page.screenshot(path=screenshot_path)
+                logger.info(f"錯誤頁面截圖: {screenshot_path}")
+                
+                # 保存HTML
+                html_content = await page.content()
+                html_path = os.path.join(self.config.output_dir, f"captcha_error_{int(time.time())}.html")
+                with open(html_path, 'w', encoding='utf-8') as f:
+                    f.write(html_content)
+                logger.info(f"錯誤頁面HTML已保存至: {html_path}")
+                
+                # 詢問用戶如何處理
+                user_decision = input("處理驗證碼時發生錯誤，請選擇:\n1. 手動在瀏覽器中處理\n2. 重試自動處理\n3. 放棄處理\n請輸入選項(1/2/3): ")
+                
+                if user_decision == '1':
+                    user_input = input("請在瀏覽器中手動處理驗證碼，完成後按Enter繼續...")
+                    return True
+                elif user_decision == '2':
+                    return await self.handle_captcha(page)  # 遞歸調用，重試處理驗證碼
+                else:
+                    logger.warning("用戶選擇放棄處理驗證碼")
+                    return False
+            except Exception as screenshot_error:
+                logger.error(f"保存錯誤截圖時出錯: {str(screenshot_error)}")
+                return False
+
+    async def handle_repeat_login_page(self, page):
+        """處理重複登入頁面，點擊'將目前帳號登出，立即登入'按鈕"""
+        try:
+            # 檢查是否在重複登入頁面
+            current_url = page.url
+            logger.info(f"檢查是否為重複登入頁面: {current_url}")
+            
+            is_repeat_login_page = (
+                'repeatLogin' in current_url or 
+                'status/repeat' in current_url or
+                '/account/relogin/' in current_url
+            )
+            
+            # 嘗試從頁面內容檢查
+            if not is_repeat_login_page:
+                page_content = await page.content()
+                repeat_keywords = [
+                    "重複登入",
+                    "重新登入",
+                    "將目前帳號登出",
+                    "立即登入",
+                    "此帳號已在其他地方登入"
+                ]
+                
+                is_repeat_login_page = any(keyword in page_content for keyword in repeat_keywords)
+            
+            if not is_repeat_login_page:
+                logger.info("目前頁面不是重複登入頁面，無需處理")
+                return False
+            
+            # 如果是重複登入頁面，截圖紀錄
+            logger.warning("檢測到重複登入頁面")
+            screenshot_path = os.path.join(self.config.output_dir, f"repeat_login_page_{int(time.time())}.png")
+            await page.screenshot(path=screenshot_path)
+            logger.info(f"重複登入頁面截圖: {screenshot_path}")
+            
+            # 立即登入按鈕的選擇器清單
+            logout_login_button_selectors = [
+                'button:has-text("將目前帳號登出，立即登入")',
+                'button:has-text("立即登入")',
+                'a:has-text("將目前帳號登出，立即登入")',
+                'a:has-text("立即登入")',
+                'input[value*="立即登入"]',
+                '.logout-and-login-btn',
+                '.immediate-login-btn',
+                '#logout-and-login',
+                '[data-btn-type="logout-and-login"]'
+            ]
+            
+            # 嘗試點擊登出並立即登入按鈕
+            button_clicked = False
+            
+            # 先截圖看看按鈕在哪裡
+            before_click_screenshot = os.path.join(self.config.output_dir, f"before_click_repeat_login_{int(time.time())}.png")
+            await page.screenshot(path=before_click_screenshot)
+            logger.info(f"點擊前頁面截圖: {before_click_screenshot}")
+            
+            # 1. 使用選擇器尋找按鈕
+            for selector in logout_login_button_selectors:
+                try:
+                    logger.info(f"嘗試使用選擇器找到登出並立即登入按鈕: {selector}")
+                    await page.wait_for_selector(selector, timeout=2000)
+                    button = await page.query_selector(selector)
+                    if button:
+                        await button.click()
+                        logger.info(f"成功點擊按鈕: {selector}")
+                        button_clicked = True
+                        break
+                except Exception as e:
+                    logger.debug(f"使用選擇器 {selector} 點擊按鈕失敗: {str(e)}")
+            
+            # 2. 如果選擇器方法失敗，嘗試使用 JS 根據文字內容點擊
+            if not button_clicked:
+                try:
+                    logger.info("嘗試使用 JavaScript 根據文字內容點擊按鈕")
+                    button_texts = ["將目前帳號登出，立即登入", "立即登入"]
+                    for text in button_texts:
+                        js_click_result = await page.evaluate(f'''() => {{
+                            // 尋找包含指定文字的按鈕
+                            const buttons = Array.from(document.querySelectorAll('button, a, input[type="button"], input[type="submit"]'));
+                            const targetButton = buttons.find(button => button.innerText && button.innerText.includes("{text}"));
+                            
+                            if (targetButton) {{
+                                targetButton.click();
+                                return true;
+                            }}
+                            
+                            // 還可以嘗試尋找任何包含該文字的元素
+                            const elements = Array.from(document.querySelectorAll('*'));
+                            const targetElement = elements.find(el => 
+                                el.innerText && 
+                                el.innerText.includes("{text}") && 
+                                (getComputedStyle(el).cursor === 'pointer' || el.onclick)
+                            );
+                            
+                            if (targetElement) {{
+                                targetElement.click();
+                                return true;
+                            }}
+                            
+                            return false;
+                        }}''')
+                        
+                        if js_click_result:
+                            logger.info(f"使用 JavaScript 成功點擊包含文字'{text}'的按鈕")
+                            button_clicked = True
+                            break
+                except Exception as e:
+                    logger.warning(f"使用 JavaScript 點擊按鈕失敗: {str(e)}")
+            
+            # 3. 直接提交表單
+            if not button_clicked:
+                try:
+                    form_selectors = ['form', 'form[action*="login"]', 'form[action*="auth"]']
+                    for selector in form_selectors:
+                        form = await page.query_selector(selector)
+                        if form:
+                            await page.evaluate(f'document.querySelector("{selector}").submit()')
+                            logger.info(f"直接提交表單: {selector}")
+                            button_clicked = True
+                            break
+                except Exception as e:
+                    logger.warning(f"提交表單失敗: {str(e)}")
+            
+            # 點擊後截圖
+            after_click_screenshot = os.path.join(self.config.output_dir, f"after_click_repeat_login_{int(time.time())}.png")
+            await page.screenshot(path=after_click_screenshot)
+            logger.info(f"點擊後頁面截圖: {after_click_screenshot}")
+            
+            # 等待頁面加載
+            await page.wait_for_load_state('networkidle', timeout=10000)
+            
+            # 檢查是否仍在重複登入頁面
+            current_url_after = page.url
+            still_on_repeat_page = (
+                'repeatLogin' in current_url_after or 
+                'status/repeat' in current_url_after or
+                '/account/relogin/' in current_url_after
+            )
+            
+            if still_on_repeat_page:
+                logger.warning("仍然在重複登入頁面，可能需要手動操作")
+                # 嘗試再次點擊
+                retry_input = input("仍然在重複登入頁面，是否嘗試再次點擊？(y/n): ").strip().lower()
+                if retry_input == 'y':
+                    return await self.handle_repeat_login_page(page)  # 遞歸再次嘗試
+                else:
+                    user_action = input("請在瀏覽器中手動處理重複登入，完成後按Enter繼續...")
+            
+            if button_clicked:
+                logger.info("已成功處理重複登入頁面")
+            else:
+                logger.warning("無法自動處理重複登入頁面，可能需要手動操作")
+                user_action = input("請在瀏覽器中手動處理重複登入，完成後按Enter繼續...")
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"處理重複登入頁面時發生錯誤: {str(e)}")
+            error_screenshot = os.path.join(self.config.output_dir, f"repeat_login_error_{int(time.time())}.png")
+            await page.screenshot(path=error_screenshot)
+            logger.info(f"錯誤頁面截圖: {error_screenshot}")
+            
+            # 詢問用戶如何處理
+            user_input = input("處理重複登入頁面時發生錯誤，請在瀏覽器中手動處理，完成後按Enter繼續...")
+            return False
+
+    async def search_resumes(self, keyword):
+        """搜尋求職者履歷"""
+        try:
+            logger.info(f"開始搜尋關鍵字: {keyword}")
+            
+            # 確保已經登入並在正確的頁面
+            if 'vip.104.com' not in self.page.url:
+                logger.warning("當前頁面非VIP頁面，嘗試重新登入")
+                login_success = await self.login_to_vip()
+                if not login_success:
+                    logger.error("登入失敗，無法繼續搜尋")
+                    return False
+            
+            # 在開始搜尋前處理可能的重複登入頁面
+            repeat_login_page = await self.handle_repeat_login_page(self.page)
+            if repeat_login_page:
+                logger.info("已處理重複登入頁面，繼續搜尋流程")
+                await self.page.wait_for_load_state('networkidle', timeout=10000)
+            
+            # 確認當前頁面
+            current_url = self.page.url
+            is_on_homepage = '/index/index' in current_url or 'dashboard' in current_url or ('/company' in current_url and '/search' not in current_url)
+            is_on_search_page = '/search' in current_url
+            
+            logger.info(f"當前URL: {current_url}")
+            
+            # 如果不在搜尋頁面，則導航到搜尋頁面
+            if not is_on_search_page:
+                logger.info("導航到VIP搜尋頁面")
+                
+                # 首先嘗試點擊導航選單中的搜尋連結
+                search_nav_selectors = [
+                    'a:has-text("搜尋履歷")',
+                    'a:text("搜尋履歷")',
+                    'a:has-text("人才搜尋")',
+                    'a:text("人才搜尋")',
+                    'a:has-text("搜尋人才")',
+                    'a:text("搜尋人才")',
+                    'a[href*="search"]',
+                    '.nav-search',
+                    '.search-link'
+                ]
+                
+                nav_clicked = False
+                for selector in search_nav_selectors:
+                    try:
+                        await self.page.wait_for_selector(selector, timeout=3000, state="visible")
+                        nav_link = await self.page.query_selector(selector)
+                        if nav_link:
+                            await nav_link.scroll_into_view_if_needed()
+                            await asyncio.sleep(0.5)
+                            await nav_link.click()
+                            logger.info(f"已點擊搜尋導航連結: {selector}")
+                            nav_clicked = True
+                            await self.page.wait_for_load_state('networkidle', timeout=10000)
+                            break
+                    except Exception as e:
+                        logger.debug(f"使用選擇器 '{selector}' 點擊搜尋導航連結失敗: {str(e)}")
+                        continue
+                
+                # 如果無法通過導航進入搜尋頁面，直接導航到搜尋URL
+                if not nav_clicked:
+                    logger.info("未找到搜尋導航連結，直接導航到搜尋頁面")
+                    search_urls = [
+                        self.config.search_url,
+                        "https://vip.104.com.tw/search/search",
+                        "https://vip.104.com.tw/company/search",
+                        "https://vip.104.com.tw/search/resumes"
+                    ]
+                    
+                    # 嘗試不同的搜尋頁面URL
+                    for url in search_urls:
+                        try:
+                            await self.page.goto(url)
+                            await self.page.wait_for_load_state('networkidle', timeout=10000)
+                            logger.info(f"已導航到搜尋頁面: {url}")
+                            break
+                        except Exception as e:
+                            logger.warning(f"導航到搜尋頁面 {url} 失敗: {str(e)}")
+                            continue
+            
+            # 等待頁面完全加載
+            await asyncio.sleep(2)
+            await self.page.wait_for_load_state('networkidle', timeout=10000)
+            
+            # 定義搜尋框的選擇器 (包含更多可能的選擇器)
+            search_input_selectors = [
+                'input[placeholder*="請輸入關鍵字"]', 
+                'input[placeholder*="搜尋"]',
+                'input[placeholder*="關鍵字"]',
+                'input[name="keyword"]',
+                'input[name="q"]',
+                'input[type="search"]',
+                'input[aria-label*="搜尋"]',
+                'input.search-input',
+                '.search-input input',
+                '#keyword',
+                '#search-input',
+                'input.form-control',
+                '.search-box input',
+                '.keyword-input',
+                '#resumeKeyword',
+                '#searchKeyword'
+            ]
+            
+            # 尋找搜尋輸入框
+            search_input_found = False
+            for selector in search_input_selectors:
+                try:
+                    # 檢查選擇器是否存在
+                    await self.page.wait_for_selector(selector, timeout=2000, state="visible")
+                    search_input = await self.page.query_selector(selector)
+                    if search_input:
+                        # 確保輸入框可見
+                        await search_input.scroll_into_view_if_needed()
+                        await asyncio.sleep(0.5)
+                        
+                        # 清除輸入框並填入關鍵字
+                        await search_input.click()
+                        await search_input.fill("")
+                        await asyncio.sleep(0.5)
+                        
+                        # 填入關鍵字
+                        await search_input.fill(keyword)
+                        logger.info(f"已找到並填入搜尋關鍵字: {keyword} (選擇器: {selector})")
+                        search_input_found = True
+                        break
+                except Exception as e:
+                    logger.debug(f"使用選擇器 '{selector}' 填入搜尋關鍵字失敗: {str(e)}")
+                    continue
+            
+            # 如果依然找不到搜尋框，嘗試使用JavaScript尋找並填入
+            if not search_input_found:
+                logger.info("使用JavaScript嘗試查找搜尋框並填入關鍵字")
+                try:
+                    js_filled = await self.page.evaluate(f'''
+                    () => {{
+                        // 尋找所有可能的搜尋輸入框
+                        const possibleInputs = [
+                            ...Array.from(document.querySelectorAll('input[placeholder*="關鍵字"]')),
+                            ...Array.from(document.querySelectorAll('input[placeholder*="搜尋"]')),
+                            ...Array.from(document.querySelectorAll('input[type="search"]')),
+                            ...Array.from(document.querySelectorAll('input[name="keyword"]')),
+                            ...Array.from(document.querySelectorAll('input[name="q"]')),
+                            ...Array.from(document.querySelectorAll('.search-input input, input.search-input')),
+                            ...Array.from(document.querySelectorAll('.search-box input')),
+                            ...Array.from(document.querySelectorAll('#keyword, #searchKeyword, #resumeKeyword, #search-input'))
+                        ];
+                        
+                        for (const input of possibleInputs) {{
+                            if (input && input.type !== 'hidden' && 
+                                (window.getComputedStyle(input).display !== 'none' && 
+                                window.getComputedStyle(input).visibility !== 'hidden')) {{
+                                input.value = '';
+                                input.value = "{keyword}";
+                                input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                                return true;
+                            }}
+                        }}
+                        return false;
+                    }}
+                    ''')
+                    
+                    if js_filled:
+                        logger.info(f"已通過JavaScript填入搜尋關鍵字: {keyword}")
+                        search_input_found = True
+                except Exception as e:
+                    logger.debug(f"JavaScript填入搜尋關鍵字失敗: {str(e)}")
+            
+            # 如果仍然找不到搜尋框，拍個截圖給用戶看
+            if not search_input_found:
+                logger.warning("無法找到搜尋輸入框")
+                
+                # 保存截圖
+                screenshot_path = os.path.join(self.config.output_dir, f"search_input_not_found_{int(time.time())}.png")
+                await self.page.screenshot(path=screenshot_path)
+                logger.info(f"搜尋輸入框未找到截圖: {screenshot_path}")
+                
+                # 保存HTML內容以供分析
+                html_content = await self.page.content()
+                html_path = os.path.join(self.config.output_dir, f"search_page_{int(time.time())}.html")
+                with open(html_path, 'w', encoding='utf-8') as f:
+                    f.write(html_content)
+                logger.info(f"搜尋頁面HTML已保存至: {html_path}")
+                
+                # 詢問用戶如何處理
+                user_decision = input(f"無法找到搜尋輸入框，請選擇:\n1. 手動輸入搜尋關鍵字 '{keyword}'\n2. 重試自動搜尋\n3. 重新導航到搜尋頁面\n4. 放棄搜尋\n請輸入選項(1/2/3/4): ")
+                
+                if user_decision == '1':
+                    user_input = input(f"請在瀏覽器中手動輸入搜尋關鍵字 '{keyword}'，完成後按Enter繼續...")
+                    search_input_found = True  # 假設用戶已手動填入
+                elif user_decision == '2':
+                    logger.info("重試自動搜尋流程")
+                    return await self.search_resumes(keyword)  # 遞歸重試
+                elif user_decision == '3':
+                    logger.info("重新導航到搜尋頁面")
+                    await self.page.goto(self.config.search_url)
+                    await self.page.wait_for_load_state('networkidle', timeout=10000)
+                    return await self.search_resumes(keyword)  # 重新嘗試
+                else:
+                    logger.info("使用者選擇放棄搜尋")
+                    return False
+            
+            # 提交搜尋 - 先嘗試按回車鍵
+            if search_input_found:
+                try:
+                    logger.info("嘗試使用Enter鍵提交搜尋")
+                    # 嘗試所有搜尋輸入框選擇器
+                    enter_pressed = False
+                    for selector in search_input_selectors:
+                        try:
+                            search_input = await self.page.query_selector(selector)
+                            if search_input:
+                                await search_input.press('Enter')
+                                logger.info(f"已使用Enter鍵在 '{selector}' 提交搜尋")
+                                enter_pressed = True
+                                break
+                        except Exception as e:
+                            logger.debug(f"使用Enter鍵在 '{selector}' 提交搜尋失敗: {str(e)}")
+                            continue
+                    
+                    if enter_pressed:
+                        # 等待搜尋結果加載
+                        await asyncio.sleep(1)
+                        await self.page.wait_for_load_state('networkidle', timeout=15000)
+                except Exception as e:
+                    logger.warning(f"使用Enter鍵提交搜尋失敗: {str(e)}")
+            
+            # 如果Enter鍵未能提交，嘗試點擊搜尋按鈕
+            search_button_selectors = [
+                'button:has-text("搜尋")',
+                'button:text("搜尋")',
+                'button[type="submit"]',
+                'button.search-button',
+                '.search-btn',
+                'button[aria-label="搜尋"]',
+                'button.btn-primary',
+                'button.btn-search',
+                'input[type="submit"][value*="搜尋"]',
+                '.search-icon',
+                'svg[aria-label="搜尋"]',
+                '.fa-search'
+            ]
+            
+            search_button_clicked = False
+            for selector in search_button_selectors:
+                try:
+                    search_button = await self.page.query_selector(selector)
+                    if search_button:
+                        await search_button.scroll_into_view_if_needed()
+                        await asyncio.sleep(0.5)
+                        await search_button.click()
+                        logger.info(f"已點擊搜尋按鈕: {selector}")
+                        search_button_clicked = True
+                        # 等待搜尋結果加載
+                        await self.page.wait_for_load_state('networkidle', timeout=15000)
+                        break
+                except Exception as e:
+                    logger.debug(f"使用選擇器 '{selector}' 點擊搜尋按鈕失敗: {str(e)}")
+                    continue
+            
+            # 如果仍然無法提交搜尋，嘗試使用JavaScript點擊搜尋按鈕
+            if not search_button_clicked and search_input_found:
+                logger.info("嘗試使用JavaScript點擊搜尋按鈕")
+                try:
+                    js_clicked = await self.page.evaluate('''
+                    () => {
+                        // 尋找所有搜尋按鈕
+                        const buttons = [
+                            ...Array.from(document.querySelectorAll('button')).filter(b => 
+                                b.textContent.includes('搜尋') || 
+                                b.getAttribute('aria-label')?.includes('搜尋')),
+                            ...Array.from(document.querySelectorAll('.search-btn, .search-button, .btn-search, button[type="submit"]')),
+                            ...Array.from(document.querySelectorAll('input[type="submit"]')).filter(i => 
+                                i.value?.includes('搜尋'))
+                        ];
+                        
+                        for (const button of buttons) {
+                            if (button && (window.getComputedStyle(button).display !== 'none' && 
+                                window.getComputedStyle(button).visibility !== 'hidden')) {
+                                button.click();
+                                return true;
+                            }
+                        }
+                        
+                        // 嘗試點擊搜尋圖標
+                        const icons = document.querySelectorAll('.search-icon, .fa-search, svg[aria-label="搜尋"]');
+                        for (const icon of icons) {
+                            if (icon && (window.getComputedStyle(icon).display !== 'none' && 
+                                window.getComputedStyle(icon).visibility !== 'hidden')) {
+                                icon.click();
+                                return true;
+                            }
+                        }
+                        
+                        return false;
+                    }
+                    ''')
+                    
+                    if js_clicked:
+                        logger.info("已通過JavaScript點擊搜尋按鈕")
+                        search_button_clicked = True
+                        # 等待搜尋結果加載
+                        await self.page.wait_for_load_state('networkidle', timeout=15000)
+                except Exception as e:
+                    logger.debug(f"JavaScript點擊搜尋按鈕失敗: {str(e)}")
+            
+            # 如果自動點擊按鈕與Enter都失敗，提示用戶手動操作
+            if not search_button_clicked and not search_input_found:
+                logger.warning("自動提交搜尋失敗，請求用戶手動操作")
+                
+                # 保存截圖
+                submit_screenshot = os.path.join(self.config.output_dir, f"search_submit_failed_{int(time.time())}.png")
+                await self.page.screenshot(path=submit_screenshot)
+                logger.info(f"搜尋提交失敗截圖: {submit_screenshot}")
+                
+                user_input = input("請在瀏覽器中手動提交搜尋，完成後按Enter繼續...")
+            
+            # 等待搜尋結果加載
+            logger.info("等待搜尋結果加載...")
+            await asyncio.sleep(2)
+            await self.page.wait_for_load_state('networkidle', timeout=15000)
+            
+            # 檢查是否有搜尋結果
+            result_selectors = [
+                '.search-result',
+                '.result-list',
+                '.resume-list',
+                '.resume-card',
+                '.candidate-card',
+                '.candidate-item',
+                '.search-results-container',
+                '.result-container',
+                '.candidate-list',
+                'div[data-automation-id="search-result"]'
+            ]
+            
+            results_found = False
+            for selector in result_selectors:
+                try:
+                    result_container = await self.page.query_selector(selector)
+                    if result_container:
+                        results_found = True
+                        logger.info(f"已找到搜尋結果容器: {selector}")
+                        break
+                except Exception as e:
+                    logger.debug(f"檢查搜尋結果容器 '{selector}' 失敗: {str(e)}")
+                    continue
+            
+            # 更全面地檢查是否有結果 - 包括檢查頁面文本
+            if not results_found:
+                try:
+                    # 檢查頁面是否包含結果計數的文本
+                    page_text = await self.page.evaluate('() => document.body.innerText')
+                    result_count_patterns = [
+                        r'\d+\s*筆符合',
+                        r'共\s*\d+\s*筆',
+                        r'找到\s*\d+\s*位',
+                        r'符合條件\s*\d+\s*人'
+                    ]
+                    
+                    for pattern in result_count_patterns:
+                        if re.search(pattern, page_text):
+                            logger.info("通過文本匹配找到搜尋結果計數")
+                            results_found = True
+                            break
+                except Exception as e:
+                    logger.debug(f"檢查頁面文本中的結果計數失敗: {str(e)}")
+            
+            # 檢查是否有"無符合條件的資料"等提示
+            no_results_selectors = [
+                'div:has-text("無符合條件的資料")',
+                'div:text("無符合條件的資料")',
+                'div:has-text("沒有符合的搜尋結果")',
+                'div:text("沒有符合的搜尋結果")',
+                'div:has-text("No results found")',
+                '.empty-result',
+                '.no-data-message',
+                '.no-result'
+            ]
+            
+            no_results_found = False
+            for selector in no_results_selectors:
+                try:
+                    no_results_element = await self.page.query_selector(selector)
+                    if no_results_element:
+                        no_results_found = True
+                        logger.warning(f"搜尋無結果: {selector}")
+                        break
+                except Exception as e:
+                    logger.debug(f"檢查無結果提示 '{selector}' 失敗: {str(e)}")
+                    continue
+            
+            # 如果沒有找到明確的無結果提示，也通過頁面文字檢查
+            if not no_results_found:
+                try:
+                    page_text = await self.page.evaluate('() => document.body.innerText')
+                    no_results_texts = [
+                        "無符合條件的資料",
+                        "沒有符合的搜尋結果",
+                        "找不到符合的履歷",
+                        "No results found",
+                        "無搜尋結果"
+                    ]
+                    
+                    if any(text in page_text for text in no_results_texts):
+                        no_results_found = True
+                        logger.warning("通過頁面文字檢測到無搜尋結果")
+                except Exception as e:
+                    logger.debug(f"通過頁面文字檢查無結果提示失敗: {str(e)}")
+            
+            # 如果有明確的"無結果"提示
+            if no_results_found:
+                logger.warning(f"搜尋關鍵字 '{keyword}' 無符合結果")
+                # 截圖保存
+                no_results_screenshot = os.path.join(self.config.output_dir, f"search_no_results_{int(time.time())}.png")
+                await self.page.screenshot(path=no_results_screenshot)
+                logger.info(f"無搜尋結果截圖: {no_results_screenshot}")
+                return False
+            
+            # 如果沒有明確檢測到結果或無結果提示，截圖並詢問用戶
+            if not results_found and not no_results_found:
+                logger.warning("無法判斷搜尋結果狀態")
+                # 截圖保存
+                uncertain_screenshot = os.path.join(self.config.output_dir, f"search_uncertain_{int(time.time())}.png")
+                await self.page.screenshot(path=uncertain_screenshot)
+                logger.info(f"搜尋狀態不明截圖: {uncertain_screenshot}")
+                
+                # 保存當前頁面HTML以便分析
+                html_content = await self.page.content()
+                uncertain_html_path = os.path.join(self.config.output_dir, f"search_uncertain_page_{int(time.time())}.html")
+                with open(uncertain_html_path, 'w', encoding='utf-8') as f:
+                    f.write(html_content)
+                logger.info(f"搜尋狀態不明頁面HTML已保存至: {uncertain_html_path}")
+                
+                # 詢問用戶
+                user_decision = input("無法確定搜尋結果狀態，請查看瀏覽器:\n1. 已成功搜尋到結果\n2. 無搜尋結果\n3. 重試搜尋\n請輸入選項(1/2/3): ")
+                
+                if user_decision == '1':
+                    logger.info("用戶確認已有搜尋結果")
+                    results_found = True
+                elif user_decision == '2':
+                    logger.warning("用戶確認無搜尋結果")
+                    return False
+                else:
+                    logger.info("用戶選擇重試搜尋")
+                    return await self.search_resumes(keyword)  # 遞歸重試
+            
+            # 如果成功找到結果
+            if results_found or not no_results_found:  # 沒有明確提示無結果，則假設有結果
+                logger.info(f"搜尋關鍵字 '{keyword}' 成功，找到結果")
+                return True
+            else:
+                logger.warning(f"搜尋關鍵字 '{keyword}' 可能無符合結果")
+                return False
+            
+        except Exception as e:
+            logger.error(f"搜尋過程中發生錯誤: {str(e)}")
+            
+            # 截圖保存錯誤頁面
+            try:
+                screenshot_path = os.path.join(self.config.output_dir, f"search_error_{int(time.time())}.png")
+                await self.page.screenshot(path=screenshot_path)
+                logger.info(f"搜尋錯誤截圖: {screenshot_path}")
+                
+                # 保存當前頁面HTML
+                html_content = await self.page.content()
+                html_path = os.path.join(self.config.output_dir, f"search_error_page_{int(time.time())}.html")
+                with open(html_path, 'w', encoding='utf-8') as f:
+                    f.write(html_content)
+                logger.info(f"錯誤頁面HTML已保存至: {html_path}")
+                
+                # 詢問用戶如何處理
+                user_decision = input("搜尋過程中發生錯誤，請選擇:\n1. 手動在瀏覽器中搜尋\n2. 重試自動搜尋\n3. 放棄搜尋\n請輸入選項(1/2/3): ")
+                
+                if user_decision == '1':
+                    user_input = input(f"請在瀏覽器中手動搜尋關鍵字 '{keyword}'，完成後按Enter繼續...")
+                    return True  # 假設用戶已成功搜尋
+                elif user_decision == '2':
+                    logger.info("重試自動搜尋流程")
+                    return await self.search_resumes(keyword)  # 遞歸重試
+                else:
+                    logger.info("使用者選擇放棄搜尋")
+                    return False
+            except Exception as screenshot_error:
+                logger.error(f"保存錯誤截圖和HTML時出錯: {str(screenshot_error)}")
+                return False
+
+    async def scrape_all_resumes(self, keyword, get_details=False):
+        """爬取所有符合關鍵字的履歷"""
+        logger.info(f"開始爬取關鍵字 '{keyword}' 的求職者履歷")
+        
+        try:
+            # 先執行搜尋
+            search_successful = await self.search_resumes(keyword)
+            if not search_successful:
+                logger.warning(f"搜尋關鍵字 '{keyword}' 失敗或無結果")
+                return []
+            
+            # 開始收集結果
+            logger.info("開始收集履歷資料")
+            
+            # 用於存儲所有履歷
+            all_resumes = []
+            current_page = 1
+            
+            # 按頁爬取履歷
+            while current_page <= self.config.max_pages:
+                logger.info(f"正在爬取第 {current_page} 頁履歷...")
+                
+                # 等待頁面加載完成
+                await self.page.wait_for_load_state('networkidle', timeout=10000)
+                
+                # 保存當前頁面的履歷列表HTML
+                page_html_path = os.path.join(self.config.output_dir, f"resume_list_page_{current_page}.html")
+                html_content = await self.page.content()
+                with open(page_html_path, 'w', encoding='utf-8') as f:
+                    f.write(html_content)
+                logger.info(f"第 {current_page} 頁履歷列表HTML已保存至: {page_html_path}")
+                
+                # 收集當前頁面的履歷
+                page_resumes = await self.extract_page_resumes(get_details)
+                
+                if page_resumes:
+                    all_resumes.extend(page_resumes)
+                    logger.info(f"第 {current_page} 頁收集到 {len(page_resumes)} 份履歷")
+                    
+                    # 保存當前頁面的結果
+                    current_page_df = pd.DataFrame(page_resumes)
+                    excel_path = os.path.join(self.config.output_dir, f"履歷資料_第{current_page}頁.xlsx")
+                    current_page_df.to_excel(excel_path, index=False, engine='openpyxl')
+                    
+                    json_path = os.path.join(self.config.output_dir, f"履歷資料_第{current_page}頁.json")
+                    with open(json_path, 'w', encoding='utf-8') as f:
+                        json.dump(page_resumes, f, ensure_ascii=False, indent=2)
+                    
+                    logger.info(f"第 {current_page} 頁履歷已保存至: {excel_path} 和 {json_path}")
+                else:
+                    logger.warning(f"第 {current_page} 頁未找到任何履歷")
+                    break
+                
+                # 翻至下一頁
+                if current_page < self.config.max_pages:
+                    next_page_clicked = await self.go_to_next_page()
+                    if not next_page_clicked:
+                        logger.info("沒有更多頁面，爬取結束")
+                        break
+                    current_page += 1
+                else:
+                    logger.info(f"已達到設定的最大頁數 {self.config.max_pages}")
+                    break
+            
+            logger.info(f"履歷爬取完成，共收集 {len(all_resumes)} 份履歷")
+            return all_resumes
+            
+        except Exception as e:
+            logger.error(f"爬取履歷過程中發生錯誤: {str(e)}")
+            
+            # 截圖保存錯誤頁面
+            try:
+                screenshot_path = os.path.join(self.config.output_dir, f"scrape_error_{int(time.time())}.png")
+                await self.page.screenshot(path=screenshot_path)
+                logger.info(f"爬取錯誤截圖: {screenshot_path}")
+                
+                # 詢問用戶如何處理
+                user_decision = input("爬取過程中發生錯誤，請選擇:\n1. 繼續執行\n2. 放棄爬取\n請輸入選項(1/2): ")
+                
+                if user_decision == '1':
+                    logger.info("使用者選擇繼續執行")
+                    return []  # 返回空列表，讓程序繼續執行
+                else:
+                    logger.info("使用者選擇放棄爬取")
+                    return []
+            except Exception as screenshot_error:
+                logger.error(f"保存錯誤截圖時出錯: {str(screenshot_error)}")
+                return []
+    
+    async def extract_page_resumes(self, get_details=False):
+        """提取當前頁面的所有履歷"""
+        try:
+            logger.info("開始提取當前頁面的履歷資料")
+            
+            # 等待頁面完全加載
+            await self.page.wait_for_load_state('networkidle', timeout=10000)
+            
+            # 履歷卡片的可能選擇器
+            resume_card_selectors = [
+                '.resume-item',
+                '.candidate-card',
+                '.candidate-item',
+                '.resume-card',
+                '.result-item',
+                '.search-result-item',
+                'div[data-automation-id="resume-card"]',
+                'div[data-card-type="resume"]'
+            ]
+            
+            # 尋找所有履歷卡片
+            resume_cards = []
+            for selector in resume_card_selectors:
+                try:
+                    cards = await self.page.query_selector_all(selector)
+                    if cards and len(cards) > 0:
+                        logger.info(f"找到 {len(cards)} 個履歷卡片 (選擇器: {selector})")
+                        resume_cards = cards
+                        break
+                except Exception as e:
+                    logger.debug(f"使用選擇器 '{selector}' 查找履歷卡片失敗: {str(e)}")
+                    continue
+            
+            # 如果沒有找到卡片，嘗試使用JavaScript來查找
+            if not resume_cards:
+                logger.info("使用JavaScript尋找履歷卡片")
+                js_cards_info = await self.page.evaluate('''
+                () => {
+                    // 尋找所有可能的卡片元素
+                    const potentialCards = [
+                        ...document.querySelectorAll('.resume-item, .candidate-card, .candidate-item, .resume-card, .result-item'),
+                        ...document.querySelectorAll('div[data-automation-id="resume-card"], div[data-card-type="resume"]'),
+                        ...document.querySelectorAll('.search-result-item')
+                    ];
+                    
+                    // 如果找到卡片，返回信息
+                    if (potentialCards.length > 0) {
+                        return {
+                            found: true,
+                            count: potentialCards.length
+                        };
+                    }
+                    
+                    // 如果沒有找到明確的卡片，尋找可能是結果列表的容器
+                    const resultContainers = document.querySelectorAll('.search-result, .result-list, .resume-list');
+                    if (resultContainers.length > 0) {
+                        // 嘗試找出容器中的子元素，這些可能是卡片
+                        let childElements = [];
+                        resultContainers.forEach(container => {
+                            const children = Array.from(container.children).filter(child => 
+                                child.tagName === 'DIV' && 
+                                child.offsetHeight > 50 && 
+                                child.offsetWidth > 100
+                            );
+                            childElements = childElements.concat(children);
+                        });
+                        
+                        if (childElements.length > 0) {
+                            return {
+                                found: true,
+                                count: childElements.length,
+                                isContainer: true
+                            };
+                        }
+                    }
+                    
+                    return { found: false };
+                }
+                ''')
+                
+                if js_cards_info and js_cards_info.get('found'):
+                    logger.info(f"JavaScript找到了 {js_cards_info.get('count')} 個潛在的履歷卡片")
+                    # 雖然找到了卡片，但我們無法直接使用它們
+                    # 我們可以提示用戶手動檢查
+                    screenshot_path = os.path.join(self.config.output_dir, f"resume_cards_{int(time.time())}.png")
+                    await self.page.screenshot(path=screenshot_path)
+                    logger.info(f"潛在的履歷卡片截圖: {screenshot_path}")
+                    
+                    user_input = input("已檢測到潛在的履歷卡片，請確認網頁上是否顯示了搜尋結果? (y/n): ")
+                    if user_input.lower() != 'y':
+                        logger.warning("用戶確認頁面上沒有顯示履歷卡片")
+                        return []
+            
+            # 從頁面提取履歷數據
+            resumes_data = await self.page.evaluate('''
+            () => {
+                // 識別履歷卡片的選擇器
+                const cardSelectors = [
+                    '.resume-item',
+                    '.candidate-card',
+                    '.candidate-item',
+                    '.resume-card',
+                    '.result-item',
+                    '.search-result-item',
+                    'div[data-automation-id="resume-card"]',
+                    'div[data-card-type="resume"]'
+                ];
+                
+                // 找出所有可能的履歷卡片
+                let allCards = [];
+                for (const selector of cardSelectors) {
+                    const cards = document.querySelectorAll(selector);
+                    if (cards.length > 0) {
+                        allCards = Array.from(cards);
+                        break;
+                    }
+                }
+                
+                // 如果沒有找到明確的卡片，尋找可能的結果容器
+                if (allCards.length === 0) {
+                    const resultContainers = document.querySelectorAll('.search-result, .result-list, .resume-list');
+                    if (resultContainers.length > 0) {
+                        resultContainers.forEach(container => {
+                            const children = Array.from(container.children).filter(child => 
+                                child.tagName === 'DIV' && 
+                                child.offsetHeight > 50 && 
+                                child.offsetWidth > 100
+                            );
+                            allCards = allCards.concat(children);
+                        });
+                    }
+                }
+                
+                // 從每個卡片提取有用信息
+                return allCards.map((card, index) => {
+                    // 嘗試提取各種信息
+                    const cardText = card.innerText || '';
+                    const cardHTML = card.innerHTML || '';
+                    
+                    // 解析姓名 (可能在 h2, h3, 或帶有特定類名的元素中)
+                    let name = '';
+                    const nameElements = card.querySelectorAll('h2, h3, .name, .candidate-name, .resume-name');
+                    if (nameElements.length > 0) {
+                        name = nameElements[0].innerText.trim();
+                    }
+                    
+                    // 如果沒有找到明確的姓名，嘗試從卡片文本中解析
+                    if (!name) {
+                        // 尋找看起來像姓名的文本 (通常是2-4個字符)
+                        const nameMatch = cardText.match(/^\\s*([\\u4e00-\\u9fa5]{2,4})\\s*[\\n\\r]/m);
+                        if (nameMatch) {
+                            name = nameMatch[1].trim();
+                        }
+                    }
+                    
+                    // 解析職稱
+                    let title = '';
+                    const titleElements = card.querySelectorAll('.title, .job-title, .candidate-title, .resume-title');
+                    if (titleElements.length > 0) {
+                        title = titleElements[0].innerText.trim();
+                    }
+                    
+                    // 解析工作經驗
+                    let experience = '';
+                    const expElements = card.querySelectorAll('.experience, .work-exp, .work-experience');
+                    if (expElements.length > 0) {
+                        experience = expElements[0].innerText.trim();
+                    } else {
+                        // 嘗試從文本中找出工作經驗相關信息
+                        const expMatch = cardText.match(/經驗[：:]\\s*(.+?)\\s*[\\n\\r]/);
+                        if (expMatch) {
+                            experience = expMatch[1].trim();
+                        }
+                    }
+                    
+                    // 解析學歷
+                    let education = '';
+                    const eduElements = card.querySelectorAll('.education, .edu, .academic-background');
+                    if (eduElements.length > 0) {
+                        education = eduElements[0].innerText.trim();
+                    } else {
+                        // 嘗試從文本中找出學歷相關信息
+                        const eduMatch = cardText.match(/學歷[：:]\\s*(.+?)\\s*[\\n\\r]/);
+                        if (eduMatch) {
+                            education = eduMatch[1].trim();
+                        }
+                    }
+                    
+                    // 提取照片URL
+                    let photoUrl = '';
+                    const imgElements = card.querySelectorAll('img');
+                    if (imgElements.length > 0) {
+                        for (const img of imgElements) {
+                            // 排除小圖標或裝飾性圖片
+                            if (img.width > 30 && img.height > 30) {
+                                photoUrl = img.src;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // 提取詳細頁面連結
+                    let detailLink = '';
+                    const linkElements = card.querySelectorAll('a');
+                    if (linkElements.length > 0) {
+                        for (const link of linkElements) {
+                            // 優先尋找看起來像詳細資料連結的元素
+                            if (link.href && (
+                                link.href.includes('/resume/') || 
+                                link.href.includes('/profile/') || 
+                                link.href.includes('/candidate/')
+                            )) {
+                                detailLink = link.href;
+                                break;
+                            }
+                        }
+                        // 如果沒找到明確的詳細連結，使用第一個連結
+                        if (!detailLink && linkElements[0].href) {
+                            detailLink = linkElements[0].href;
+                        }
+                    }
+                    
+                    // 提取技能標籤
+                    let skills = [];
+                    const skillElements = card.querySelectorAll('.skill, .tag, .skill-tag, .label');
+                    if (skillElements.length > 0) {
+                        skills = Array.from(skillElements).map(elem => elem.innerText.trim());
+                    }
+                    
+                    return {
+                        id: `resume_${index + 1}`,
+                        name: name || `求職者${index + 1}`,
+                        title: title || '未提供',
+                        experience: experience || '未提供',
+                        education: education || '未提供',
+                        photo_url: photoUrl || '',
+                        detail_link: detailLink || '',
+                        skills: skills,
+                        raw_text: cardText.trim(),
+                    };
+                });
+            }
+            ''')
+            
+            logger.info(f"從頁面提取到 {len(resumes_data)} 份履歷資料")
+            
+            # 如果啟用了詳細信息獲取，依次訪問每個詳細頁面
+            if get_details and resumes_data:
+                logger.info("開始獲取詳細履歷資料...")
+                
+                for i, resume in enumerate(resumes_data):
+                    if resume.get('detail_link'):
+                        try:
+                            logger.info(f"正在獲取第 {i+1}/{len(resumes_data)} 份詳細履歷資料")
+                            detailed_info = await self.get_resume_details(resume.get('detail_link'))
+                            if detailed_info:
+                                # 更新原始數據
+                                resumes_data[i].update(detailed_info)
+                                logger.info(f"已獲取 {resume.get('name')} 的詳細資料")
+                            
+                            # 下載照片 (如果有URL且設定為下載)
+                            if self.config.download_photos and resume.get('photo_url'):
+                                photo_path = await self.download_photo(resume.get('photo_url'), resume.get('id'))
+                                if photo_path:
+                                    resumes_data[i]['photo_local_path'] = photo_path
+                        except Exception as e:
+                            logger.error(f"獲取詳細資料時出錯: {str(e)}")
+                            continue
+            
+            return resumes_data
+            
+        except Exception as e:
+            logger.error(f"提取頁面履歷時出錯: {str(e)}")
+            return []
+    
+    async def go_to_next_page(self):
+        """前往下一頁搜尋結果"""
+        try:
+            logger.info("嘗試前往下一頁")
+            
+            # 等待頁面加載完成
+            await self.page.wait_for_load_state('networkidle', timeout=10000)
+            
+            # 可能的下一頁按鈕選擇器
+            next_page_selectors = [
+                'a.next, a.next-page',
+                'a[aria-label="下一頁"]',
+                'button[aria-label="下一頁"]',
+                'a:has-text("下一頁")',
+                'button:has-text("下一頁")',
+                'a:has-text(">")',
+                'button:has-text(">")',
+                '.pagination .next',
+                '.pagination-next',
+                '[data-testid="pagination-next"]'
+            ]
+            
+            # 尋找並點擊下一頁按鈕
+            next_button_clicked = False
+            for selector in next_page_selectors:
+                try:
+                    next_button = await self.page.query_selector(selector)
+                    if next_button:
+                        # 檢查按鈕是否可點擊 (不是disabled)
+                        is_disabled = await self.page.evaluate('''
+                        (button) => {
+                            return button.disabled || 
+                                   button.classList.contains('disabled') || 
+                                   button.getAttribute('aria-disabled') === 'true';
+                        }
+                        ''', next_button)
+                        
+                        if is_disabled:
+                            logger.info("下一頁按鈕已禁用，已到達最後一頁")
+                            return False
+                        
+                        # 確保按鈕在視窗中可見
+                        await next_button.scroll_into_view_if_needed()
+                        await asyncio.sleep(0.5)
+                        
+                        # 點擊下一頁按鈕
+                        await next_button.click()
+                        logger.info(f"已點擊下一頁按鈕: {selector}")
+                        next_button_clicked = True
+                        
+                        # 等待頁面加載
+                        await asyncio.sleep(1)
+                        await self.page.wait_for_load_state('networkidle', timeout=15000)
+                        break
+                except Exception as e:
+                    logger.debug(f"使用選擇器 '{selector}' 點擊下一頁按鈕失敗: {str(e)}")
+                    continue
+            
+            # 如果沒有找到明確的下一頁按鈕，嘗試使用JavaScript找出並點擊
+            if not next_button_clicked:
+                logger.info("嘗試使用JavaScript尋找並點擊下一頁按鈕")
+                js_clicked = await self.page.evaluate('''
+                () => {
+                    // 尋找所有含有"下一頁"或">"文本的元素
+                    const nextTexts = ["下一頁", "next", "Next", ">", "›", "»"];
+                    
+                    // 尋找可能的分頁元素
+                    const paginationElements = document.querySelectorAll('.pagination, .pager, nav[aria-label*="pagination"]');
+                    let nextButton = null;
+                    
+                    // 先在分頁導航中尋找
+                    if (paginationElements.length > 0) {
+                        for (const pagination of paginationElements) {
+                            const links = pagination.querySelectorAll('a, button');
+                            for (const link of links) {
+                                if (nextTexts.some(text => link.innerText.includes(text))) {
+                                    // 檢查是否禁用
+                                    if (!link.disabled && 
+                                        !link.classList.contains('disabled') && 
+                                        link.getAttribute('aria-disabled') !== 'true') {
+                                        nextButton = link;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (nextButton) break;
+                        }
+                    }
+                    
+                    // 如果在分頁導航中沒找到，在整個頁面尋找
+                    if (!nextButton) {
+                        const allLinks = document.querySelectorAll('a, button');
+                        for (const link of allLinks) {
+                            if (nextTexts.some(text => link.innerText.includes(text))) {
+                                // 檢查是否禁用
+                                if (!link.disabled && 
+                                    !link.classList.contains('disabled') && 
+                                    link.getAttribute('aria-disabled') !== 'true') {
+                                    nextButton = link;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // 如果找到了下一頁按鈕，點擊它
+                    if (nextButton) {
+                        nextButton.click();
+                        return true;
+                    }
+                    
+                    return false;
+                }
+                ''')
+                
+                if js_clicked:
+                    logger.info("已使用JavaScript點擊下一頁按鈕")
+                    next_button_clicked = True
+                    # 等待頁面加載
+                    await asyncio.sleep(1)
+                    await self.page.wait_for_load_state('networkidle', timeout=15000)
+                else:
+                    logger.warning("未找到下一頁按鈕")
+            
+            # 如果自動點擊失敗，詢問用戶
+            if not next_button_clicked:
+                logger.warning("無法自動前往下一頁，請求用戶協助")
+                
+                # 保存當前頁面截圖
+                screenshot_path = os.path.join(self.config.output_dir, f"next_page_failed_{int(time.time())}.png")
+                await self.page.screenshot(path=screenshot_path)
+                logger.info(f"無法前往下一頁截圖: {screenshot_path}")
+                
+                # 詢問用戶處理方式
+                user_decision = input("無法自動前往下一頁，請選擇:\n1. 手動在瀏覽器中導航到下一頁\n2. 已到達最後一頁，停止爬取\n請輸入選項(1/2): ")
+                
+                if user_decision == '1':
+                    user_input = input("請在瀏覽器中手動點擊下一頁，完成後按Enter繼續...")
+                    return True
+                else:
+                    logger.info("用戶確認已到達最後一頁")
+                    return False
+            
+            return next_button_clicked
+            
+        except Exception as e:
+            logger.error(f"前往下一頁時出錯: {str(e)}")
+            return False
+    
+    async def get_resume_details(self, detail_url):
+        """獲取履歷詳細信息"""
+        try:
+            logger.info(f"開始獲取詳細履歷: {detail_url}")
+            
+            # 打開新頁面獲取詳情，這樣不會干擾當前頁面
+            detail_page = await self.browser.new_page()
+            
+            try:
+                # 導航到詳細頁面
+                await detail_page.goto(detail_url, timeout=30000)
+                await detail_page.wait_for_load_state('networkidle', timeout=15000)
+                
+                # 保存詳細頁面HTML (用於調試)
+                detail_html_path = os.path.join(self.config.output_dir, f"detail_page_{int(time.time())}.html")
+                html_content = await detail_page.content()
+                with open(detail_html_path, 'w', encoding='utf-8') as f:
+                    f.write(html_content)
+                
+                # 從頁面提取詳細信息
+                detailed_info = await detail_page.evaluate('''
+                () => {
+                    const extractTextContent = (selector) => {
+                        const element = document.querySelector(selector);
+                        return element ? element.innerText.trim() : "";
+                    };
+                    
+                    // 提取各種詳細信息
+                    const info = {
+                        full_name: extractTextContent('.resume-name, .candidate-name, h1, h2'),
+                        gender: extractTextContent('.gender, [data-title="性別"]'),
+                        age: extractTextContent('.age, [data-title="年齡"]'),
+                        phone: extractTextContent('.phone, [data-title="電話"], [data-title="手機"]'),
+                        email: extractTextContent('.email, [data-title="Email"]'),
+                        education_detail: [],
+                        work_experience_detail: [],
+                        skills_detail: [],
+                        certificates: [],
+                        expected_salary: extractTextContent('[data-title="期望薪資"], .expected-salary')
+                    };
+                    
+                    // 提取教育經歷
+                    const eduElements = document.querySelectorAll('.education-item, .education-section li, .education');
+                    if (eduElements.length > 0) {
+                        info.education_detail = Array.from(eduElements).map(edu => {
+                            return edu.innerText.trim();
+                        });
+                    }
+                    
+                    // 提取工作經歷
+                    const workElements = document.querySelectorAll('.experience-item, .work-experience-section li, .work-experience');
+                    if (workElements.length > 0) {
+                        info.work_experience_detail = Array.from(workElements).map(work => {
+                            return work.innerText.trim();
+                        });
+                    }
+                    
+                    // 提取技能
+                    const skillElements = document.querySelectorAll('.skill-item, .skills li, .skill-tag');
+                    if (skillElements.length > 0) {
+                        info.skills_detail = Array.from(skillElements).map(skill => {
+                            return skill.innerText.trim();
+                        });
+                    }
+                    
+                    // 提取證照
+                    const certElements = document.querySelectorAll('.certificate-item, .certificates li, .certificate');
+                    if (certElements.length > 0) {
+                        info.certificates = Array.from(certElements).map(cert => {
+                            return cert.innerText.trim();
+                        });
+                    }
+                    
+                    return info;
+                }
+                ''')
+                
+                logger.info(f"已獲取詳細資料: {', '.join(detailed_info.keys())}")
+                return detailed_info
+                
+            finally:
+                # 關閉詳情頁面
+                await detail_page.close()
+        
+        except Exception as e:
+            logger.error(f"獲取詳細履歷資料時出錯: {str(e)}")
+            return {}
+    
+    async def download_photo(self, photo_url, resume_id):
+        """下載求職者照片"""
+        if not photo_url or not resume_id:
+            return ""
+        
+        try:
+            logger.info(f"開始下載照片: {photo_url}")
+            
+            # 創建新的頁面來下載照片
+            photo_page = await self.browser.new_page()
+            
+            try:
+                # 導航到照片URL
+                await photo_page.goto(photo_url, timeout=30000)
+                
+                # 確定照片格式
+                content_type = None
+                for response in photo_page.request.headers:
+                    if response.lower() == 'content-type':
+                        content_type = photo_page.request.headers[response]
+                        break
+                
+                # 根據content-type確定擴展名
+                extension = '.jpg'  # 默認
+                if content_type:
+                    if 'png' in content_type:
+                        extension = '.png'
+                    elif 'gif' in content_type:
+                        extension = '.gif'
+                
+                # 構建保存路徑
+                photo_filename = f"{resume_id}{extension}"
+                photo_path = os.path.join(self.config.photos_dir, photo_filename)
+                
+                # 截圖保存 (這不是最佳方法，但可以用於簡單實現)
+                await photo_page.screenshot(path=photo_path)
+                logger.info(f"照片已保存至: {photo_path}")
+                
+                return photo_path
+            
+            finally:
+                # 關閉照片頁面
+                await photo_page.close()
+        
+        except Exception as e:
+            logger.error(f"下載照片時出錯: {str(e)}")
+            return ""
+    
+    async def save_final_results(self, resumes, keyword):
+        """保存最終結果"""
+        try:
+            if not resumes or len(resumes) == 0:
+                logger.warning("沒有結果可以保存")
+                return
+            
+            logger.info(f"保存 {len(resumes)} 份履歷結果")
+            
+            # 創建DataFrame
+            df = pd.DataFrame(resumes)
+            
+            # 處理列表字段
+            list_columns = ['skills', 'education_detail', 'work_experience_detail', 'skills_detail', 'certificates']
+            for col in list_columns:
+                if col in df.columns:
+                    df[col] = df[col].apply(lambda x: ';'.join(x) if isinstance(x, list) else x)
+            
+            # 構建文件名
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            search_term = keyword.replace(' ', '_') if keyword else 'all'
+            excel_filename = f"104履歷_{search_term}_{timestamp}.xlsx"
+            json_filename = f"104履歷_{search_term}_{timestamp}.json"
+            
+            # 保存Excel文件
+            excel_path = os.path.join(self.config.output_dir, excel_filename)
+            df.to_excel(excel_path, index=False, engine='openpyxl')
+            logger.info(f"結果已保存為Excel: {excel_path}")
+            
+            # 保存JSON文件
+            json_path = os.path.join(self.config.output_dir, json_filename)
+            with open(json_path, 'w', encoding='utf-8') as f:
+                # 將原始數據保存為JSON
+                json.dump(resumes, f, ensure_ascii=False, indent=2)
+            logger.info(f"結果已保存為JSON: {json_path}")
+            
+            return True
+        
+        except Exception as e:
+            logger.error(f"保存結果時出錯: {str(e)}")
+            return False
+    
+    async def close(self):
+        """關閉瀏覽器和清理資源"""
+        try:
+            if hasattr(self, 'page') and self.page:
+                logger.info("關閉頁面")
+                await self.page.close()
+            
+            if hasattr(self, 'browser') and self.browser:
+                logger.info("關閉瀏覽器")
+                await self.browser.close()
+            
+            if hasattr(self, 'playwright') and self.playwright:
+                logger.info("關閉Playwright")
+                await self.playwright.stop()
+                
+            logger.info("已關閉所有資源")
+            return True
+        except Exception as e:
+            logger.error(f"關閉資源時出錯: {str(e)}")
+            return False
+
+async def main():
+    """主程序"""
+    print("=== 104人力銀行求職者爬蟲 ===")
+    print("注意：使用本工具需遵守104相關使用條款及個人資料保護法")
+    print("      僅供學習研究使用，請勿用於商業或非法用途\n")
+    
+    # 使用預設帳號
+    username = "willyyayaya@gmail.com"
+    password = "a130629925"
+    
+    print(f"使用帳號: {username}")
+    keyword = input("請輸入搜索關鍵詞 (直接按Enter搜索全部): ")
+    
+    try:
+        max_pages = int(input("請輸入要爬取的頁數 (預設5頁): ") or "5")
+    except:
+        max_pages = 5
+    
+    get_details = input("是否獲取詳細履歷資料? (y/n，預設n): ").lower() == 'y'
+    download_photos = input("是否下載求職者照片? (y/n，預設y): ").lower() != 'n'
+    
+    # 詢問是否啟用手動協助模式
+    manual_assist = input("是否啟用手動協助模式(建議開啟)? (y/n，預設y): ").lower() != 'n'
+    
+    # 創建設定
+    config = ResumeScraperConfig(
+        username=username,
+        password=password,
+        download_photos=download_photos,
+        max_pages=max_pages,
+        search_keyword=keyword
+    )
+    
+    # 創建爬蟲實例
+    scraper = ResumeScraper(config)
+    
+    try:
+        # 初始化瀏覽器
+        await scraper.initialize()
+        
+        # 登入
+        login_success = await scraper.login_to_vip()
+        if not login_success:
+            if manual_assist:
+                print("自動登入失敗，但啟用了手動協助模式，嘗試繼續")
+            else:
+                print("登入失敗，程序結束")
+                await scraper.close()
+                return
+        
+        # 爬取履歷
+        print(f"開始爬取{'「'+keyword+'」的' if keyword else ''}求職者資料...")
+        resumes = await scraper.scrape_all_resumes(keyword, get_details)
+        
+        # 保存結果
+        if resumes and len(resumes) > 0:
+            await scraper.save_final_results(resumes, keyword)
+            print(f"爬取完成，共獲取 {len(resumes)} 份履歷")
+            print(f"結果已保存至目錄: {config.output_dir}")
+        else:
+            print("未找到任何符合條件的履歷")
+    
+    except Exception as e:
+        logger.error(f"程序執行時出錯: {str(e)}")
+        print(f"程序執行時出錯: {str(e)}")
+    
+    finally:
+        # 關閉瀏覽器
+        await scraper.close()
+
+if __name__ == "__main__":
+    asyncio.run(main()) 
