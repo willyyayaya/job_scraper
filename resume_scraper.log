@@ -2129,3 +2129,546 @@ Call log:
 2025-04-16 18:29:49,849 - INFO - 已保存含照片的Excel文件: resume_data_20250416_182930/履歷資料_1744799389.xlsx
 2025-04-16 18:29:49,852 - INFO - 已保存履歷資料至JSON: resume_data_20250416_182930/履歷資料_1744799389.json
 2025-04-16 18:29:49,962 - INFO - 瀏覽器已關閉
+2025-04-16 18:31:53,571 - INFO - 瀏覽器初始化成功，使用持久化上下文模式
+2025-04-16 18:31:55,309 - INFO - 已進入VIP首頁
+2025-04-16 18:31:56,454 - INFO - ✅ 檢測到您已經登入，無需重新驗證!
+2025-04-16 18:31:56,454 - INFO - 開始搜尋流程
+2025-04-16 18:31:56,983 - INFO - 已輸入搜尋關鍵詞: backend
+2025-04-16 18:31:57,909 - INFO - 已按下Enter鍵執行搜尋
+2025-04-16 18:31:57,909 - INFO - 等待搜尋結果加載...
+2025-04-16 18:32:02,908 - INFO - 搜尋成功，當前URL: https://vip.104.com.tw/search/searchResult?kws=backend&contactInfo=1&ec=8&sortType=RANK&plastActionDateType=1&updateDateType=1&contactPrivacy=0
+2025-04-16 18:32:02,985 - INFO - 搜尋結果頁面截圖已保存至: resume_data_20250416_183152/search_results_1744799522.png
+2025-04-16 18:32:02,985 - INFO - 開始提取搜尋頁面的履歷卡片信息
+2025-04-16 18:32:03,001 - INFO - 找到 50 個履歷卡片，使用選擇器: .resume-card
+2025-04-16 18:32:03,009 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1ecfc79d50eac62823121b87f1e8d6e2c8382d42b97f1b89b13426200520bce33927fcb4e629a1defc2080a2514c899c02096f22eb3dbf30e2d720ed1447e7da0
+2025-04-16 18:32:03,009 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1ecfc79d50eac62823121b87f1e8d6e2c8382d42b97f1b89b13426200520bce33927fcb4e629a1defc2080a2514c899c02096f22eb3dbf30e2d720ed1447e7da0
+2025-04-16 18:32:03,214 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/1__沈浩丞_1744799523.jpg
+2025-04-16 18:32:03,214 - INFO - 已提取第 1 個履歷卡片的資訊: 1  沈浩丞
+2025-04-16 18:32:03,225 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1d5afa60f2dbe5355c0a730a91deec896206bf87b66acc9ec5bf7d2d25af5ae06c0df0801c368af66583847a82ca246b498c85829889091ebb7eba46729f9466d
+2025-04-16 18:32:03,225 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1d5afa60f2dbe5355c0a730a91deec896206bf87b66acc9ec5bf7d2d25af5ae06c0df0801c368af66583847a82ca246b498c85829889091ebb7eba46729f9466d
+2025-04-16 18:32:03,382 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/2__王建德_1744799523.jpg
+2025-04-16 18:32:03,383 - INFO - 已提取第 2 個履歷卡片的資訊: 2  王建德
+2025-04-16 18:32:03,394 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=173b8380ae147e1645f0cbad029022f27206bf87b66acc9ec5bf7d2d25af5ae06bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:32:03,394 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=173b8380ae147e1645f0cbad029022f27206bf87b66acc9ec5bf7d2d25af5ae06bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:32:03,518 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/3__林源韋_1744799523.jpg
+2025-04-16 18:32:03,518 - INFO - 已提取第 3 個履歷卡片的資訊: 3  林源韋
+2025-04-16 18:32:03,528 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=16e91ad5e9c83acdd9031960cbb23a9698382d42b97f1b89b13426200520bce33e155346811362fd9775cebb5851abb9b4714fc69060fea31ebd9dd55c30c3a0c
+2025-04-16 18:32:03,528 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=16e91ad5e9c83acdd9031960cbb23a9698382d42b97f1b89b13426200520bce33e155346811362fd9775cebb5851abb9b4714fc69060fea31ebd9dd55c30c3a0c
+2025-04-16 18:32:03,640 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/4__黃宗漢_1744799523.jpg
+2025-04-16 18:32:03,641 - INFO - 已提取第 4 個履歷卡片的資訊: 4  黃宗漢
+2025-04-16 18:32:03,651 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=137658bf7d6d3eb2bf73d7eee10a649848382d42b97f1b89b13426200520bce331dfe0c1b5507c1928096783d40b8d9ce74a2a0626f6a331e8f07c8ab373b19fd
+2025-04-16 18:32:03,651 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=137658bf7d6d3eb2bf73d7eee10a649848382d42b97f1b89b13426200520bce331dfe0c1b5507c1928096783d40b8d9ce74a2a0626f6a331e8f07c8ab373b19fd
+2025-04-16 18:32:03,778 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/5__王彙智_1744799523.jpg
+2025-04-16 18:32:03,778 - INFO - 已提取第 5 個履歷卡片的資訊: 5  王彙智
+2025-04-16 18:32:03,788 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=14f770a5bdce670b6d7c643b4fd0fa87d206bf87b66acc9ec5bf7d2d25af5ae06c289168322f63aa6ef6c03cad47175db4a62f26249ab86d303ab33e24ff7ff54
+2025-04-16 18:32:03,788 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=14f770a5bdce670b6d7c643b4fd0fa87d206bf87b66acc9ec5bf7d2d25af5ae06c289168322f63aa6ef6c03cad47175db4a62f26249ab86d303ab33e24ff7ff54
+2025-04-16 18:32:03,896 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/6__黃青雲_1744799523.jpg
+2025-04-16 18:32:03,896 - INFO - 已提取第 6 個履歷卡片的資訊: 6  黃青雲
+2025-04-16 18:32:03,904 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=17625e58229012063c4641f077b45ff498382d42b97f1b89b13426200520bce3342968b74c14df174fd27295c24150781465070b824dbed0e730cec962e88a827
+2025-04-16 18:32:03,904 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=17625e58229012063c4641f077b45ff498382d42b97f1b89b13426200520bce3342968b74c14df174fd27295c24150781465070b824dbed0e730cec962e88a827
+2025-04-16 18:32:04,419 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/7__邱子軒_1744799523.jpg
+2025-04-16 18:32:04,420 - INFO - 已提取第 7 個履歷卡片的資訊: 7  邱子軒
+2025-04-16 18:32:04,429 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=162e94635630612357a5b30ba1d57b766206bf87b66acc9ec5bf7d2d25af5ae06369b7de2c5184264f837227443a1604552d86c75beb860704a84fd6e2a0f5797
+2025-04-16 18:32:04,429 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=162e94635630612357a5b30ba1d57b766206bf87b66acc9ec5bf7d2d25af5ae06369b7de2c5184264f837227443a1604552d86c75beb860704a84fd6e2a0f5797
+2025-04-16 18:32:04,574 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/8__潘昱良_1744799524.jpg
+2025-04-16 18:32:04,574 - INFO - 已提取第 8 個履歷卡片的資訊: 8  潘昱良
+2025-04-16 18:32:04,587 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1e885fa68b01d8db3763e1f639f8af6b98382d42b97f1b89b13426200520bce33032fe9f9c0de189c120bc4f6f4f1f17dc42fbd6e772d725e1822564c676076c8
+2025-04-16 18:32:04,587 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1e885fa68b01d8db3763e1f639f8af6b98382d42b97f1b89b13426200520bce33032fe9f9c0de189c120bc4f6f4f1f17dc42fbd6e772d725e1822564c676076c8
+2025-04-16 18:32:04,764 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/9__HuangWei-Cheng_1744799524.jpg
+2025-04-16 18:32:04,764 - INFO - 已提取第 9 個履歷卡片的資訊: 9  HuangWei-Cheng
+2025-04-16 18:32:04,778 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1151b128b144b68d7d643fa83859173f48382d42b97f1b89b13426200520bce3336a277bda7d1d3606ba6a11f0b29b2e90fdd77f1fe2afa571bcf1f40f4cdf58d
+2025-04-16 18:32:04,778 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1151b128b144b68d7d643fa83859173f48382d42b97f1b89b13426200520bce3336a277bda7d1d3606ba6a11f0b29b2e90fdd77f1fe2afa571bcf1f40f4cdf58d
+2025-04-16 18:32:04,945 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/10__蔡易延_1744799524.jpg
+2025-04-16 18:32:04,945 - INFO - 已提取第 10 個履歷卡片的資訊: 10  蔡易延
+2025-04-16 18:32:04,965 - INFO - 找到候選頭像: https://static.104.com.tw/104main/vipphp/main/img/head/photo-resume-no-photo.png
+2025-04-16 18:32:04,965 - INFO - 開始下載大頭照: https://static.104.com.tw/104main/vipphp/main/img/head/photo-resume-no-photo.png
+2025-04-16 18:32:05,015 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/11__葉家宏_1744799524.jpg
+2025-04-16 18:32:05,015 - INFO - 已提取第 11 個履歷卡片的資訊: 11  葉家宏
+2025-04-16 18:32:05,025 - INFO - 找到候選頭像: https://static.104.com.tw/104main/vipphp/main/img/head/photo-resume-no-photo.png
+2025-04-16 18:32:05,026 - INFO - 開始下載大頭照: https://static.104.com.tw/104main/vipphp/main/img/head/photo-resume-no-photo.png
+2025-04-16 18:32:05,069 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/12__李明翰_1744799525.jpg
+2025-04-16 18:32:05,069 - INFO - 已提取第 12 個履歷卡片的資訊: 12  李明翰
+2025-04-16 18:32:05,075 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=196e0fe5fbbc580e0a74dc4351144d4708382d42b97f1b89b13426200520bce338a008c92a74b0785d43cf267feb6e4c1981e36aa2e0a2e9e761a0dd6058d6b8a
+2025-04-16 18:32:05,075 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=196e0fe5fbbc580e0a74dc4351144d4708382d42b97f1b89b13426200520bce338a008c92a74b0785d43cf267feb6e4c1981e36aa2e0a2e9e761a0dd6058d6b8a
+2025-04-16 18:32:05,197 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/13__DeckersEmma_Marie_1744799525.jpg
+2025-04-16 18:32:05,198 - INFO - 已提取第 13 個履歷卡片的資訊: 13  DeckersEmma Marie
+2025-04-16 18:32:05,205 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1ab3d87b6213455895b716a16cb44b249206bf87b66acc9ec5bf7d2d25af5ae061647738dc91a0c5fa954e12a1092b240a4f2def4cd721bed2d8ad231c0cdde90
+2025-04-16 18:32:05,205 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1ab3d87b6213455895b716a16cb44b249206bf87b66acc9ec5bf7d2d25af5ae061647738dc91a0c5fa954e12a1092b240a4f2def4cd721bed2d8ad231c0cdde90
+2025-04-16 18:32:05,343 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/14__盧裕翔_1744799525.jpg
+2025-04-16 18:32:05,343 - INFO - 已提取第 14 個履歷卡片的資訊: 14  盧裕翔
+2025-04-16 18:32:05,354 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=17845e71f1a129dda44d6de2402ae00cd206bf87b66acc9ec5bf7d2d25af5ae06bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:32:05,354 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=17845e71f1a129dda44d6de2402ae00cd206bf87b66acc9ec5bf7d2d25af5ae06bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:32:05,481 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/15__郭貞君_1744799525.jpg
+2025-04-16 18:32:05,481 - INFO - 已提取第 15 個履歷卡片的資訊: 15  郭貞君
+2025-04-16 18:32:05,492 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1046f9165ba710a936d566e9fb4c7ded98382d42b97f1b89b13426200520bce3372a0cefd15c638f12acd60486c182c6dc5e32201cc4eb856602faad50046252f
+2025-04-16 18:32:05,492 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1046f9165ba710a936d566e9fb4c7ded98382d42b97f1b89b13426200520bce3372a0cefd15c638f12acd60486c182c6dc5e32201cc4eb856602faad50046252f
+2025-04-16 18:32:05,632 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/16__羅元駿_1744799525.jpg
+2025-04-16 18:32:05,632 - INFO - 已提取第 16 個履歷卡片的資訊: 16  羅元駿
+2025-04-16 18:32:05,643 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=14cb7fcbc55a9ffebad348fcaf9f02a388382d42b97f1b89b13426200520bce33ea6b194a53aab3098ec7fc29af654fc69f7dfc3f98e32672ee37da94a05b79c5
+2025-04-16 18:32:05,643 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=14cb7fcbc55a9ffebad348fcaf9f02a388382d42b97f1b89b13426200520bce33ea6b194a53aab3098ec7fc29af654fc69f7dfc3f98e32672ee37da94a05b79c5
+2025-04-16 18:32:05,820 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/17__劉于莎_1744799525.jpg
+2025-04-16 18:32:05,820 - INFO - 已提取第 17 個履歷卡片的資訊: 17  劉于莎
+2025-04-16 18:32:05,833 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1d01f1d77bfa4540c10e45bee6dedc1e8206bf87b66acc9ec5bf7d2d25af5ae0612d0af0270f7fce5ff2c877f7015e03914e01a347f6f81b61e12aceaa9d8dab2
+2025-04-16 18:32:05,833 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1d01f1d77bfa4540c10e45bee6dedc1e8206bf87b66acc9ec5bf7d2d25af5ae0612d0af0270f7fce5ff2c877f7015e03914e01a347f6f81b61e12aceaa9d8dab2
+2025-04-16 18:32:05,942 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/18__林群揚_1744799525.jpg
+2025-04-16 18:32:05,942 - INFO - 已提取第 18 個履歷卡片的資訊: 18  林群揚
+2025-04-16 18:32:05,953 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=10952ecfd445970b6145c22098c8c44c88382d42b97f1b89b13426200520bce33a89b7650e910c5b672cdd66f654e4498b5833de4926b7be4a1abf9c30e11e1b8
+2025-04-16 18:32:05,953 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=10952ecfd445970b6145c22098c8c44c88382d42b97f1b89b13426200520bce33a89b7650e910c5b672cdd66f654e4498b5833de4926b7be4a1abf9c30e11e1b8
+2025-04-16 18:32:06,189 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/19__陳廣馳_1744799525.jpg
+2025-04-16 18:32:06,190 - INFO - 已提取第 19 個履歷卡片的資訊: 19  陳廣馳
+2025-04-16 18:32:06,209 - INFO - 找到候選頭像: https://static.104.com.tw/104main/vipphp/main/img/head/photo-resume-no-photo.png
+2025-04-16 18:32:06,210 - INFO - 開始下載大頭照: https://static.104.com.tw/104main/vipphp/main/img/head/photo-resume-no-photo.png
+2025-04-16 18:32:06,266 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/20__謝惠羽_1744799526.jpg
+2025-04-16 18:32:06,266 - INFO - 已提取第 20 個履歷卡片的資訊: 20  謝惠羽
+2025-04-16 18:32:06,271 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=190e39bd8cbad94917ba183453ad3f9668382d42b97f1b89b13426200520bce334e4bf5372d6632cc29e8d6d57c07c68d31b561b6146762d85ede51ab2d328be0
+2025-04-16 18:32:06,271 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=190e39bd8cbad94917ba183453ad3f9668382d42b97f1b89b13426200520bce334e4bf5372d6632cc29e8d6d57c07c68d31b561b6146762d85ede51ab2d328be0
+2025-04-16 18:32:06,430 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/21__何秉翃_1744799526.jpg
+2025-04-16 18:32:06,430 - INFO - 已提取第 21 個履歷卡片的資訊: 21  何秉翃
+2025-04-16 18:32:06,438 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=124364a2d48a337a8293fdf7438c8b930206bf87b66acc9ec5bf7d2d25af5ae06bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:32:06,438 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=124364a2d48a337a8293fdf7438c8b930206bf87b66acc9ec5bf7d2d25af5ae06bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:32:06,565 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/22__陳瑀芋_1744799526.jpg
+2025-04-16 18:32:06,565 - INFO - 已提取第 22 個履歷卡片的資訊: 22  陳瑀芋
+2025-04-16 18:32:06,581 - INFO - 找到候選頭像: https://static.104.com.tw/104main/vipphp/main/img/head/photo-resume-no-photo.png
+2025-04-16 18:32:06,582 - INFO - 開始下載大頭照: https://static.104.com.tw/104main/vipphp/main/img/head/photo-resume-no-photo.png
+2025-04-16 18:32:06,628 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/23__張智淇_1744799526.jpg
+2025-04-16 18:32:06,628 - INFO - 已提取第 23 個履歷卡片的資訊: 23  張智淇
+2025-04-16 18:32:06,634 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1a21cb63a0bdd62753f633158455666c58382d42b97f1b89b13426200520bce3392a6e3bca23804f1b04688c2323d590a806de2e2bd94d245a2ea6afcd186572e
+2025-04-16 18:32:06,634 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1a21cb63a0bdd62753f633158455666c58382d42b97f1b89b13426200520bce3392a6e3bca23804f1b04688c2323d590a806de2e2bd94d245a2ea6afcd186572e
+2025-04-16 18:32:06,775 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/24__彭謙_1744799526.jpg
+2025-04-16 18:32:06,775 - INFO - 已提取第 24 個履歷卡片的資訊: 24  彭謙
+2025-04-16 18:32:06,785 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=19ff0e0bb6d27a3d104c70d4d08c0b3788382d42b97f1b89b13426200520bce33d697eaf557521c4961ecc13eb421c09c122ef9e5284b71eec4fdd3b71309d8fb
+2025-04-16 18:32:06,785 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=19ff0e0bb6d27a3d104c70d4d08c0b3788382d42b97f1b89b13426200520bce33d697eaf557521c4961ecc13eb421c09c122ef9e5284b71eec4fdd3b71309d8fb
+2025-04-16 18:32:07,020 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/25__張博崴_1744799526.jpg
+2025-04-16 18:32:07,021 - INFO - 已提取第 25 個履歷卡片的資訊: 25  張博崴
+2025-04-16 18:32:07,034 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=12f5db3ee5fb63c2b1a8fbe7ee5aa220b206bf87b66acc9ec5bf7d2d25af5ae06bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:32:07,034 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=12f5db3ee5fb63c2b1a8fbe7ee5aa220b206bf87b66acc9ec5bf7d2d25af5ae06bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:32:07,165 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/26__葉正芳_1744799527.jpg
+2025-04-16 18:32:07,166 - INFO - 已提取第 26 個履歷卡片的資訊: 26  葉正芳
+2025-04-16 18:32:07,176 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=172b4597aadea0f0db011d2c0d81869728382d42b97f1b89b13426200520bce33d499cf04a87b420d6a10ea09324718234c7883fb6ce58b603cd6303a1fdcb652
+2025-04-16 18:32:07,176 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=172b4597aadea0f0db011d2c0d81869728382d42b97f1b89b13426200520bce33d499cf04a87b420d6a10ea09324718234c7883fb6ce58b603cd6303a1fdcb652
+2025-04-16 18:32:07,320 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/27__洪家偉_1744799527.jpg
+2025-04-16 18:32:07,320 - INFO - 已提取第 27 個履歷卡片的資訊: 27  洪家偉
+2025-04-16 18:32:07,332 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=196354885de1047d1718c5714c462fbae8382d42b97f1b89b13426200520bce338baa64e28f42191a0ca8c24ab033a1fc15011675264632bbc93c2de0dade57bb
+2025-04-16 18:32:07,332 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=196354885de1047d1718c5714c462fbae8382d42b97f1b89b13426200520bce338baa64e28f42191a0ca8c24ab033a1fc15011675264632bbc93c2de0dade57bb
+2025-04-16 18:32:07,524 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/28__王喬_1744799527.jpg
+2025-04-16 18:32:07,525 - INFO - 已提取第 28 個履歷卡片的資訊: 28  王喬
+2025-04-16 18:32:07,535 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1b751b85d2f7b094f973423247539cbf7206bf87b66acc9ec5bf7d2d25af5ae06b9b781036a052fb280c2cbca6ac35c7252d86c75beb860704a84fd6e2a0f5797
+2025-04-16 18:32:07,535 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1b751b85d2f7b094f973423247539cbf7206bf87b66acc9ec5bf7d2d25af5ae06b9b781036a052fb280c2cbca6ac35c7252d86c75beb860704a84fd6e2a0f5797
+2025-04-16 18:32:07,664 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/29__蘇智煒_1744799527.jpg
+2025-04-16 18:32:07,665 - INFO - 已提取第 29 個履歷卡片的資訊: 29  蘇智煒
+2025-04-16 18:32:07,674 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=10ece0004cdfef3f6a139dabea5901acb8382d42b97f1b89b13426200520bce330df83339773d788b8f00999252220ede0dedb36833bbd513f69cf5fdfb625893
+2025-04-16 18:32:07,674 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=10ece0004cdfef3f6a139dabea5901acb8382d42b97f1b89b13426200520bce330df83339773d788b8f00999252220ede0dedb36833bbd513f69cf5fdfb625893
+2025-04-16 18:32:07,795 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/30__陳冠樺_1744799527.jpg
+2025-04-16 18:32:07,795 - INFO - 已提取第 30 個履歷卡片的資訊: 30  陳冠樺
+2025-04-16 18:32:07,805 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1dffc2f46edea4f745c1705ce9b0af32a206bf87b66acc9ec5bf7d2d25af5ae06a702942b2ef041fe9a4a9ad5058740c4675e864f8b0ac8b803a5cb447a5ae323
+2025-04-16 18:32:07,805 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1dffc2f46edea4f745c1705ce9b0af32a206bf87b66acc9ec5bf7d2d25af5ae06a702942b2ef041fe9a4a9ad5058740c4675e864f8b0ac8b803a5cb447a5ae323
+2025-04-16 18:32:07,918 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/31__吳俊明_1744799527.jpg
+2025-04-16 18:32:07,918 - INFO - 已提取第 31 個履歷卡片的資訊: 31  吳俊明
+2025-04-16 18:32:07,928 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=14e4955d3e1355102774a8c74666980d98382d42b97f1b89b13426200520bce3345e9478f4c99d45b665bb51cee17442840d95b82610fa179672219f594ee9697
+2025-04-16 18:32:07,928 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=14e4955d3e1355102774a8c74666980d98382d42b97f1b89b13426200520bce3345e9478f4c99d45b665bb51cee17442840d95b82610fa179672219f594ee9697
+2025-04-16 18:32:08,065 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/32__鄧翔運_1744799527.jpg
+2025-04-16 18:32:08,066 - INFO - 已提取第 32 個履歷卡片的資訊: 32  鄧翔運
+2025-04-16 18:32:08,076 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1ac06916368265a9e0a21c6812da72f688382d42b97f1b89b13426200520bce331d7b52bc104bb45734bac1d994084cd0793c0f3cea015498412fbb02629e9f00
+2025-04-16 18:32:08,076 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1ac06916368265a9e0a21c6812da72f688382d42b97f1b89b13426200520bce331d7b52bc104bb45734bac1d994084cd0793c0f3cea015498412fbb02629e9f00
+2025-04-16 18:32:08,433 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/33__侯伯翰_1744799528.jpg
+2025-04-16 18:32:08,434 - INFO - 已提取第 33 個履歷卡片的資訊: 33  侯伯翰
+2025-04-16 18:32:08,443 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1541cf25fc9e7fc07bacc73807f8867848382d42b97f1b89b13426200520bce33c7066b224edbfd75874a0c44391d4ecfbd33cf6ad0d59f2f8480f13a1d05589a
+2025-04-16 18:32:08,443 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1541cf25fc9e7fc07bacc73807f8867848382d42b97f1b89b13426200520bce33c7066b224edbfd75874a0c44391d4ecfbd33cf6ad0d59f2f8480f13a1d05589a
+2025-04-16 18:32:08,599 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/34__陳孜昊_1744799528.jpg
+2025-04-16 18:32:08,599 - INFO - 已提取第 34 個履歷卡片的資訊: 34  陳孜昊
+2025-04-16 18:32:08,611 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1a55eff4f822306ca52aad2d944751c958382d42b97f1b89b13426200520bce330c160275ac7a4952bd68b6ae5ef5dccd8ba2d20f022b82d864fc4b48b312595f
+2025-04-16 18:32:08,611 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1a55eff4f822306ca52aad2d944751c958382d42b97f1b89b13426200520bce330c160275ac7a4952bd68b6ae5ef5dccd8ba2d20f022b82d864fc4b48b312595f
+2025-04-16 18:32:08,822 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/35__洪世旻_1744799528.jpg
+2025-04-16 18:32:08,822 - INFO - 已提取第 35 個履歷卡片的資訊: 35  洪世旻
+2025-04-16 18:32:08,835 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1f35732d3da04fe7c5702a337c88ee91e8382d42b97f1b89b13426200520bce337b10aa93b0c0f304b2b5fe0c64487516eb72fdc1f790edb9194e8fe8b0476368
+2025-04-16 18:32:08,836 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1f35732d3da04fe7c5702a337c88ee91e8382d42b97f1b89b13426200520bce337b10aa93b0c0f304b2b5fe0c64487516eb72fdc1f790edb9194e8fe8b0476368
+2025-04-16 18:32:08,997 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/36__黃季承_1744799528.jpg
+2025-04-16 18:32:08,998 - INFO - 已提取第 36 個履歷卡片的資訊: 36  黃季承
+2025-04-16 18:32:09,010 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=187f817ebcb1aba7981ac707d8f93c1a3206bf87b66acc9ec5bf7d2d25af5ae06672d85a8cd645c92b122152870fecee2045e494b1d9edcfaf5503452b83a3da1
+2025-04-16 18:32:09,011 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=187f817ebcb1aba7981ac707d8f93c1a3206bf87b66acc9ec5bf7d2d25af5ae06672d85a8cd645c92b122152870fecee2045e494b1d9edcfaf5503452b83a3da1
+2025-04-16 18:32:09,140 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/37__鄭御廷_1744799529.jpg
+2025-04-16 18:32:09,141 - INFO - 已提取第 37 個履歷卡片的資訊: 37  鄭御廷
+2025-04-16 18:32:09,151 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1fb96ece4b9d6832cc47de38477e6fb77206bf87b66acc9ec5bf7d2d25af5ae0677f1833ef02f6436e27ed3a926d11094f5e17dc3037421b34b6905dd9d71d000
+2025-04-16 18:32:09,152 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1fb96ece4b9d6832cc47de38477e6fb77206bf87b66acc9ec5bf7d2d25af5ae0677f1833ef02f6436e27ed3a926d11094f5e17dc3037421b34b6905dd9d71d000
+2025-04-16 18:32:09,359 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/38__李承儒_1744799529.jpg
+2025-04-16 18:32:09,359 - INFO - 已提取第 38 個履歷卡片的資訊: 38  李承儒
+2025-04-16 18:32:09,373 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=14a9d9e4e1e76a46ec44c25cc972297ed8382d42b97f1b89b13426200520bce3381332a445ed2bcdb53dfea2d554c94bc95b6a2dba7599be5635efa934b46d7f5
+2025-04-16 18:32:09,373 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=14a9d9e4e1e76a46ec44c25cc972297ed8382d42b97f1b89b13426200520bce3381332a445ed2bcdb53dfea2d554c94bc95b6a2dba7599be5635efa934b46d7f5
+2025-04-16 18:32:09,494 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/39__張恩睿_1744799529.jpg
+2025-04-16 18:32:09,494 - INFO - 已提取第 39 個履歷卡片的資訊: 39  張恩睿
+2025-04-16 18:32:09,504 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=17a654ba3ffcfcc68292340c5051a53e48382d42b97f1b89b13426200520bce3387ea02561b95ed9b52c867fcff8c05aefcbcb114dccc2c83c70966d7021674cf
+2025-04-16 18:32:09,504 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=17a654ba3ffcfcc68292340c5051a53e48382d42b97f1b89b13426200520bce3387ea02561b95ed9b52c867fcff8c05aefcbcb114dccc2c83c70966d7021674cf
+2025-04-16 18:32:09,653 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/40__周逸傑_1744799529.jpg
+2025-04-16 18:32:09,653 - INFO - 已提取第 40 個履歷卡片的資訊: 40  周逸傑
+2025-04-16 18:32:09,663 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=18e094c7064e1d8bdcd87ce3172fff01e8382d42b97f1b89b13426200520bce339f4374c7dd07c69727a96e727afdc02059adc2cfad779cca04920046fe09422b
+2025-04-16 18:32:09,663 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=18e094c7064e1d8bdcd87ce3172fff01e8382d42b97f1b89b13426200520bce339f4374c7dd07c69727a96e727afdc02059adc2cfad779cca04920046fe09422b
+2025-04-16 18:32:09,826 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/41__陳羿華_1744799529.jpg
+2025-04-16 18:32:09,826 - INFO - 已提取第 41 個履歷卡片的資訊: 41  陳羿華
+2025-04-16 18:32:09,837 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1d20b4ba6f4bdcbb4887136241cdcba878382d42b97f1b89b13426200520bce3354201ef3cda90e3e83dad6ec9becf2b2474353880722a03e5a2e341884895eb7
+2025-04-16 18:32:09,838 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1d20b4ba6f4bdcbb4887136241cdcba878382d42b97f1b89b13426200520bce3354201ef3cda90e3e83dad6ec9becf2b2474353880722a03e5a2e341884895eb7
+2025-04-16 18:32:09,997 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/42__林奇緯_1744799529.jpg
+2025-04-16 18:32:09,997 - INFO - 已提取第 42 個履歷卡片的資訊: 42  林奇緯
+2025-04-16 18:32:10,008 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=111f50b074be90d756ec50af0be8f5f9d206bf87b66acc9ec5bf7d2d25af5ae06bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:32:10,008 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=111f50b074be90d756ec50af0be8f5f9d206bf87b66acc9ec5bf7d2d25af5ae06bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:32:10,220 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/43__許峻偉_1744799530.jpg
+2025-04-16 18:32:10,221 - INFO - 已提取第 43 個履歷卡片的資訊: 43  許峻偉
+2025-04-16 18:32:10,231 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1979e238c45e1c88000d126a1ab5a2fdb206bf87b66acc9ec5bf7d2d25af5ae06bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:32:10,232 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1979e238c45e1c88000d126a1ab5a2fdb206bf87b66acc9ec5bf7d2d25af5ae06bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:32:10,386 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/44__林怡岑_1744799530.jpg
+2025-04-16 18:32:10,386 - INFO - 已提取第 44 個履歷卡片的資訊: 44  林怡岑
+2025-04-16 18:32:10,395 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=10665ea5e9d036fcf22ac6f9fdbae6dba8382d42b97f1b89b13426200520bce3336692843748644646d1ded99c46a5063656f57b6bc399018fd2d2b9758440905
+2025-04-16 18:32:10,395 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=10665ea5e9d036fcf22ac6f9fdbae6dba8382d42b97f1b89b13426200520bce3336692843748644646d1ded99c46a5063656f57b6bc399018fd2d2b9758440905
+2025-04-16 18:32:10,531 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/45__鞠之浩_1744799530.jpg
+2025-04-16 18:32:10,531 - INFO - 已提取第 45 個履歷卡片的資訊: 45  鞠之浩
+2025-04-16 18:32:10,540 - INFO - 找到候選頭像: https://static.104.com.tw/104main/vipphp/main/img/head/photo-resume-no-photo.png
+2025-04-16 18:32:10,540 - INFO - 開始下載大頭照: https://static.104.com.tw/104main/vipphp/main/img/head/photo-resume-no-photo.png
+2025-04-16 18:32:10,582 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/46__HuangWright_1744799530.jpg
+2025-04-16 18:32:10,582 - INFO - 已提取第 46 個履歷卡片的資訊: 46  HuangWright
+2025-04-16 18:32:10,588 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1f8056a7fc72bdd1fb9e9729b49ad09d78382d42b97f1b89b13426200520bce33b50849a66d1c54c70f56fc52309b2869a218ad7aeb878c2a9f9a73cb9d74eec2
+2025-04-16 18:32:10,588 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1f8056a7fc72bdd1fb9e9729b49ad09d78382d42b97f1b89b13426200520bce33b50849a66d1c54c70f56fc52309b2869a218ad7aeb878c2a9f9a73cb9d74eec2
+2025-04-16 18:32:11,084 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/47__陳姿穎_1744799530.jpg
+2025-04-16 18:32:11,084 - INFO - 已提取第 47 個履歷卡片的資訊: 47  陳姿穎
+2025-04-16 18:32:11,097 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1a5dad347d4dda471d1ede0b03e2181948382d42b97f1b89b13426200520bce33a3a170567c308a8b0a5969f173d46c3a145ca9d2ac2c82b7e787922b14f94558
+2025-04-16 18:32:11,097 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1a5dad347d4dda471d1ede0b03e2181948382d42b97f1b89b13426200520bce33a3a170567c308a8b0a5969f173d46c3a145ca9d2ac2c82b7e787922b14f94558
+2025-04-16 18:32:11,325 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/48__余政育_1744799531.jpg
+2025-04-16 18:32:11,325 - INFO - 已提取第 48 個履歷卡片的資訊: 48  余政育
+2025-04-16 18:32:11,339 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=184d63bccada3d30a91fd28ed4c7a4e24206bf87b66acc9ec5bf7d2d25af5ae06bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:32:11,340 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=184d63bccada3d30a91fd28ed4c7a4e24206bf87b66acc9ec5bf7d2d25af5ae06bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:32:11,482 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/49__許軒領_1744799531.jpg
+2025-04-16 18:32:11,482 - INFO - 已提取第 49 個履歷卡片的資訊: 49  許軒領
+2025-04-16 18:32:11,495 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1eec7755b257655e6803a255379bfb3528382d42b97f1b89b13426200520bce33297b18e3f199568e647dabfe511197106171ad477c78b5ce2a830af20fcbe597
+2025-04-16 18:32:11,495 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1eec7755b257655e6803a255379bfb3528382d42b97f1b89b13426200520bce33297b18e3f199568e647dabfe511197106171ad477c78b5ce2a830af20fcbe597
+2025-04-16 18:32:11,668 - INFO - 大頭照下載成功: resume_data_20250416_183152/profile_photos/50__晏陽_1744799531.jpg
+2025-04-16 18:32:11,668 - INFO - 已提取第 50 個履歷卡片的資訊: 50  晏陽
+2025-04-16 18:32:11,763 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/1__沈浩丞_1744799523.jpg
+2025-04-16 18:32:11,772 - INFO - 已將照片插入到Excel第2行
+2025-04-16 18:32:11,772 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/2__王建德_1744799523.jpg
+2025-04-16 18:32:11,773 - INFO - 已將照片插入到Excel第3行
+2025-04-16 18:32:11,773 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/3__林源韋_1744799523.jpg
+2025-04-16 18:32:11,775 - INFO - 已將照片插入到Excel第4行
+2025-04-16 18:32:11,775 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/4__黃宗漢_1744799523.jpg
+2025-04-16 18:32:11,775 - INFO - 已將照片插入到Excel第5行
+2025-04-16 18:32:11,775 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/5__王彙智_1744799523.jpg
+2025-04-16 18:32:11,776 - INFO - 已將照片插入到Excel第6行
+2025-04-16 18:32:11,776 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/6__黃青雲_1744799523.jpg
+2025-04-16 18:32:11,776 - INFO - 已將照片插入到Excel第7行
+2025-04-16 18:32:11,776 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/7__邱子軒_1744799523.jpg
+2025-04-16 18:32:11,777 - INFO - 已將照片插入到Excel第8行
+2025-04-16 18:32:11,777 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/8__潘昱良_1744799524.jpg
+2025-04-16 18:32:11,779 - INFO - 已將照片插入到Excel第9行
+2025-04-16 18:32:11,779 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/9__HuangWei-Cheng_1744799524.jpg
+2025-04-16 18:32:11,780 - INFO - 已將照片插入到Excel第10行
+2025-04-16 18:32:11,780 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/10__蔡易延_1744799524.jpg
+2025-04-16 18:32:11,781 - INFO - 已將照片插入到Excel第11行
+2025-04-16 18:32:11,781 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/11__葉家宏_1744799524.jpg
+2025-04-16 18:32:11,782 - INFO - 已將照片插入到Excel第12行
+2025-04-16 18:32:11,782 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/12__李明翰_1744799525.jpg
+2025-04-16 18:32:11,782 - INFO - 已將照片插入到Excel第13行
+2025-04-16 18:32:11,782 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/13__DeckersEmma_Marie_1744799525.jpg
+2025-04-16 18:32:11,784 - INFO - 已將照片插入到Excel第14行
+2025-04-16 18:32:11,784 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/14__盧裕翔_1744799525.jpg
+2025-04-16 18:32:11,785 - INFO - 已將照片插入到Excel第15行
+2025-04-16 18:32:11,785 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/15__郭貞君_1744799525.jpg
+2025-04-16 18:32:11,786 - INFO - 已將照片插入到Excel第16行
+2025-04-16 18:32:11,786 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/16__羅元駿_1744799525.jpg
+2025-04-16 18:32:11,787 - INFO - 已將照片插入到Excel第17行
+2025-04-16 18:32:11,787 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/17__劉于莎_1744799525.jpg
+2025-04-16 18:32:11,789 - INFO - 已將照片插入到Excel第18行
+2025-04-16 18:32:11,789 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/18__林群揚_1744799525.jpg
+2025-04-16 18:32:11,789 - INFO - 已將照片插入到Excel第19行
+2025-04-16 18:32:11,789 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/19__陳廣馳_1744799525.jpg
+2025-04-16 18:32:11,790 - INFO - 已將照片插入到Excel第20行
+2025-04-16 18:32:11,790 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/20__謝惠羽_1744799526.jpg
+2025-04-16 18:32:11,790 - INFO - 已將照片插入到Excel第21行
+2025-04-16 18:32:11,790 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/21__何秉翃_1744799526.jpg
+2025-04-16 18:32:11,791 - INFO - 已將照片插入到Excel第22行
+2025-04-16 18:32:11,791 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/22__陳瑀芋_1744799526.jpg
+2025-04-16 18:32:11,792 - INFO - 已將照片插入到Excel第23行
+2025-04-16 18:32:11,792 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/23__張智淇_1744799526.jpg
+2025-04-16 18:32:11,793 - INFO - 已將照片插入到Excel第24行
+2025-04-16 18:32:11,793 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/24__彭謙_1744799526.jpg
+2025-04-16 18:32:11,794 - INFO - 已將照片插入到Excel第25行
+2025-04-16 18:32:11,794 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/25__張博崴_1744799526.jpg
+2025-04-16 18:32:11,795 - INFO - 已將照片插入到Excel第26行
+2025-04-16 18:32:11,795 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/26__葉正芳_1744799527.jpg
+2025-04-16 18:32:11,795 - INFO - 已將照片插入到Excel第27行
+2025-04-16 18:32:11,795 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/27__洪家偉_1744799527.jpg
+2025-04-16 18:32:11,796 - INFO - 已將照片插入到Excel第28行
+2025-04-16 18:32:11,796 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/28__王喬_1744799527.jpg
+2025-04-16 18:32:11,797 - INFO - 已將照片插入到Excel第29行
+2025-04-16 18:32:11,797 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/29__蘇智煒_1744799527.jpg
+2025-04-16 18:32:11,799 - INFO - 已將照片插入到Excel第30行
+2025-04-16 18:32:11,799 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/30__陳冠樺_1744799527.jpg
+2025-04-16 18:32:11,800 - INFO - 已將照片插入到Excel第31行
+2025-04-16 18:32:11,800 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/31__吳俊明_1744799527.jpg
+2025-04-16 18:32:11,800 - INFO - 已將照片插入到Excel第32行
+2025-04-16 18:32:11,800 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/32__鄧翔運_1744799527.jpg
+2025-04-16 18:32:11,801 - INFO - 已將照片插入到Excel第33行
+2025-04-16 18:32:11,801 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/33__侯伯翰_1744799528.jpg
+2025-04-16 18:32:11,803 - INFO - 已將照片插入到Excel第34行
+2025-04-16 18:32:11,803 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/34__陳孜昊_1744799528.jpg
+2025-04-16 18:32:11,803 - INFO - 已將照片插入到Excel第35行
+2025-04-16 18:32:11,803 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/35__洪世旻_1744799528.jpg
+2025-04-16 18:32:11,804 - INFO - 已將照片插入到Excel第36行
+2025-04-16 18:32:11,804 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/36__黃季承_1744799528.jpg
+2025-04-16 18:32:11,805 - INFO - 已將照片插入到Excel第37行
+2025-04-16 18:32:11,805 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/37__鄭御廷_1744799529.jpg
+2025-04-16 18:32:11,806 - INFO - 已將照片插入到Excel第38行
+2025-04-16 18:32:11,806 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/38__李承儒_1744799529.jpg
+2025-04-16 18:32:11,807 - INFO - 已將照片插入到Excel第39行
+2025-04-16 18:32:11,807 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/39__張恩睿_1744799529.jpg
+2025-04-16 18:32:11,808 - INFO - 已將照片插入到Excel第40行
+2025-04-16 18:32:11,808 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/40__周逸傑_1744799529.jpg
+2025-04-16 18:32:11,809 - INFO - 已將照片插入到Excel第41行
+2025-04-16 18:32:11,809 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/41__陳羿華_1744799529.jpg
+2025-04-16 18:32:11,810 - INFO - 已將照片插入到Excel第42行
+2025-04-16 18:32:11,811 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/42__林奇緯_1744799529.jpg
+2025-04-16 18:32:11,811 - INFO - 已將照片插入到Excel第43行
+2025-04-16 18:32:11,811 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/43__許峻偉_1744799530.jpg
+2025-04-16 18:32:11,813 - INFO - 已將照片插入到Excel第44行
+2025-04-16 18:32:11,813 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/44__林怡岑_1744799530.jpg
+2025-04-16 18:32:11,814 - INFO - 已將照片插入到Excel第45行
+2025-04-16 18:32:11,814 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/45__鞠之浩_1744799530.jpg
+2025-04-16 18:32:11,815 - INFO - 已將照片插入到Excel第46行
+2025-04-16 18:32:11,816 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/46__HuangWright_1744799530.jpg
+2025-04-16 18:32:11,816 - INFO - 已將照片插入到Excel第47行
+2025-04-16 18:32:11,816 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/47__陳姿穎_1744799530.jpg
+2025-04-16 18:32:11,817 - INFO - 已將照片插入到Excel第48行
+2025-04-16 18:32:11,817 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/48__余政育_1744799531.jpg
+2025-04-16 18:32:11,818 - INFO - 已將照片插入到Excel第49行
+2025-04-16 18:32:11,818 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/49__許軒領_1744799531.jpg
+2025-04-16 18:32:11,818 - INFO - 已將照片插入到Excel第50行
+2025-04-16 18:32:11,818 - INFO - 處理照片: resume_data_20250416_183152/profile_photos/50__晏陽_1744799531.jpg
+2025-04-16 18:32:11,819 - INFO - 已將照片插入到Excel第51行
+2025-04-16 18:32:11,830 - INFO - 已保存含照片的Excel文件: resume_data_20250416_183152/履歷資料_1744799531.xlsx
+2025-04-16 18:32:11,832 - INFO - 已保存履歷資料至JSON: resume_data_20250416_183152/履歷資料_1744799531.json
+2025-04-16 18:32:11,940 - INFO - 瀏覽器已關閉
+2025-04-16 18:34:03,457 - INFO - 瀏覽器初始化成功，使用持久化上下文模式
+2025-04-16 18:34:05,186 - INFO - 已進入VIP首頁
+2025-04-16 18:34:06,383 - INFO - ✅ 檢測到您已經登入，無需重新驗證!
+2025-04-16 18:34:06,383 - INFO - 開始搜尋流程
+2025-04-16 18:34:06,908 - INFO - 已輸入搜尋關鍵詞: backend
+2025-04-16 18:34:07,420 - INFO - 已按下Enter鍵執行搜尋
+2025-04-16 18:34:07,421 - INFO - 等待搜尋結果加載...
+2025-04-16 18:34:12,422 - INFO - 搜尋成功，當前URL: https://vip.104.com.tw/search/searchResult?kws=backend&contactInfo=1&ec=8&sortType=RANK&plastActionDateType=1&updateDateType=1&contactPrivacy=0
+2025-04-16 18:34:12,489 - INFO - 搜尋結果頁面截圖已保存至: resume_data_20250416_183402/search_results_1744799652.png
+2025-04-16 18:34:12,489 - INFO - 開始提取搜尋頁面的履歷卡片信息
+2025-04-16 18:34:12,504 - INFO - 找到 50 個履歷卡片，使用選擇器: .resume-card
+2025-04-16 18:34:12,514 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1ecfc79d50eac62823121b87f1e8d6e2c0e9c4987c31e10aa5bc6d9326fcdafdeda73fc85c87d7f37104de6c07b76bbb02096f22eb3dbf30e2d720ed1447e7da0
+2025-04-16 18:34:12,514 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1ecfc79d50eac62823121b87f1e8d6e2c0e9c4987c31e10aa5bc6d9326fcdafdeda73fc85c87d7f37104de6c07b76bbb02096f22eb3dbf30e2d720ed1447e7da0
+2025-04-16 18:34:12,747 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/1__沈浩丞_1744799652.jpg
+2025-04-16 18:34:12,748 - INFO - 已提取第 1 個履歷卡片的資訊: 1  沈浩丞
+2025-04-16 18:34:12,762 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1d5afa60f2dbe5355c0a730a91deec8965f1d825ade591f65d45c0c695b6bfec5c0df0801c368af66583847a82ca246b498c85829889091ebb7eba46729f9466d
+2025-04-16 18:34:12,762 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1d5afa60f2dbe5355c0a730a91deec8965f1d825ade591f65d45c0c695b6bfec5c0df0801c368af66583847a82ca246b498c85829889091ebb7eba46729f9466d
+2025-04-16 18:34:12,984 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/2__王建德_1744799652.jpg
+2025-04-16 18:34:12,985 - INFO - 已提取第 2 個履歷卡片的資訊: 2  王建德
+2025-04-16 18:34:12,999 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=173b8380ae147e1645f0cbad029022f275f1d825ade591f65d45c0c695b6bfec5bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:34:12,999 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=173b8380ae147e1645f0cbad029022f275f1d825ade591f65d45c0c695b6bfec5bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:34:13,157 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/3__林源韋_1744799652.jpg
+2025-04-16 18:34:13,157 - INFO - 已提取第 3 個履歷卡片的資訊: 3  林源韋
+2025-04-16 18:34:13,170 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=16e91ad5e9c83acdd9031960cbb23a9690e9c4987c31e10aa5bc6d9326fcdafdebcffe38ab96987d5707d70292f5f42a24714fc69060fea31ebd9dd55c30c3a0c
+2025-04-16 18:34:13,170 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=16e91ad5e9c83acdd9031960cbb23a9690e9c4987c31e10aa5bc6d9326fcdafdebcffe38ab96987d5707d70292f5f42a24714fc69060fea31ebd9dd55c30c3a0c
+2025-04-16 18:34:13,265 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/4__黃宗漢_1744799653.jpg
+2025-04-16 18:34:13,265 - INFO - 已提取第 4 個履歷卡片的資訊: 4  黃宗漢
+2025-04-16 18:34:13,274 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=137658bf7d6d3eb2bf73d7eee10a649840e9c4987c31e10aa5bc6d9326fcdafde6084d1d1564745ac5d5f79df5884d1b674a2a0626f6a331e8f07c8ab373b19fd
+2025-04-16 18:34:13,274 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=137658bf7d6d3eb2bf73d7eee10a649840e9c4987c31e10aa5bc6d9326fcdafde6084d1d1564745ac5d5f79df5884d1b674a2a0626f6a331e8f07c8ab373b19fd
+2025-04-16 18:34:13,467 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/5__王彙智_1744799653.jpg
+2025-04-16 18:34:13,468 - INFO - 已提取第 5 個履歷卡片的資訊: 5  王彙智
+2025-04-16 18:34:13,482 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=14f770a5bdce670b6d7c643b4fd0fa87d5f1d825ade591f65d45c0c695b6bfec5c289168322f63aa6ef6c03cad47175db4a62f26249ab86d303ab33e24ff7ff54
+2025-04-16 18:34:13,482 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=14f770a5bdce670b6d7c643b4fd0fa87d5f1d825ade591f65d45c0c695b6bfec5c289168322f63aa6ef6c03cad47175db4a62f26249ab86d303ab33e24ff7ff54
+2025-04-16 18:34:13,572 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/6__黃青雲_1744799653.jpg
+2025-04-16 18:34:13,572 - INFO - 已提取第 6 個履歷卡片的資訊: 6  黃青雲
+2025-04-16 18:34:13,582 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=17625e58229012063c4641f077b45ff490e9c4987c31e10aa5bc6d9326fcdafde824eecbbf2e8e440602662c3dd5e350c465070b824dbed0e730cec962e88a827
+2025-04-16 18:34:13,582 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=17625e58229012063c4641f077b45ff490e9c4987c31e10aa5bc6d9326fcdafde824eecbbf2e8e440602662c3dd5e350c465070b824dbed0e730cec962e88a827
+2025-04-16 18:34:13,743 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/7__邱子軒_1744799653.jpg
+2025-04-16 18:34:13,744 - INFO - 已提取第 7 個履歷卡片的資訊: 7  邱子軒
+2025-04-16 18:34:13,757 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=162e94635630612357a5b30ba1d57b7665f1d825ade591f65d45c0c695b6bfec5369b7de2c5184264f837227443a1604552d86c75beb860704a84fd6e2a0f5797
+2025-04-16 18:34:13,757 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=162e94635630612357a5b30ba1d57b7665f1d825ade591f65d45c0c695b6bfec5369b7de2c5184264f837227443a1604552d86c75beb860704a84fd6e2a0f5797
+2025-04-16 18:34:13,883 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/8__潘昱良_1744799653.jpg
+2025-04-16 18:34:13,883 - INFO - 已提取第 8 個履歷卡片的資訊: 8  潘昱良
+2025-04-16 18:34:13,895 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1e885fa68b01d8db3763e1f639f8af6b90e9c4987c31e10aa5bc6d9326fcdafde2a38e8b7873d4fc93286e4af3e393921c42fbd6e772d725e1822564c676076c8
+2025-04-16 18:34:13,895 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1e885fa68b01d8db3763e1f639f8af6b90e9c4987c31e10aa5bc6d9326fcdafde2a38e8b7873d4fc93286e4af3e393921c42fbd6e772d725e1822564c676076c8
+2025-04-16 18:34:14,001 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/9__HuangWei-Cheng_1744799653.jpg
+2025-04-16 18:34:14,001 - INFO - 已提取第 9 個履歷卡片的資訊: 9  HuangWei-Cheng
+2025-04-16 18:34:14,011 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1151b128b144b68d7d643fa83859173f40e9c4987c31e10aa5bc6d9326fcdafdeeeba54d0f42053fc73acaf948535eefd0fdd77f1fe2afa571bcf1f40f4cdf58d
+2025-04-16 18:34:14,011 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1151b128b144b68d7d643fa83859173f40e9c4987c31e10aa5bc6d9326fcdafdeeeba54d0f42053fc73acaf948535eefd0fdd77f1fe2afa571bcf1f40f4cdf58d
+2025-04-16 18:34:14,123 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/10__蔡易延_1744799654.jpg
+2025-04-16 18:34:14,124 - INFO - 已提取第 10 個履歷卡片的資訊: 10  蔡易延
+2025-04-16 18:34:14,139 - INFO - 找到候選頭像: https://static.104.com.tw/104main/vipphp/main/img/head/photo-resume-no-photo.png
+2025-04-16 18:34:14,139 - INFO - 開始下載大頭照: https://static.104.com.tw/104main/vipphp/main/img/head/photo-resume-no-photo.png
+2025-04-16 18:34:14,187 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/11__葉家宏_1744799654.jpg
+2025-04-16 18:34:14,187 - INFO - 已提取第 11 個履歷卡片的資訊: 11  葉家宏
+2025-04-16 18:34:14,199 - INFO - 找到候選頭像: https://static.104.com.tw/104main/vipphp/main/img/head/photo-resume-no-photo.png
+2025-04-16 18:34:14,199 - INFO - 開始下載大頭照: https://static.104.com.tw/104main/vipphp/main/img/head/photo-resume-no-photo.png
+2025-04-16 18:34:14,241 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/12__李明翰_1744799654.jpg
+2025-04-16 18:34:14,241 - INFO - 已提取第 12 個履歷卡片的資訊: 12  李明翰
+2025-04-16 18:34:14,248 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=196e0fe5fbbc580e0a74dc4351144d4700e9c4987c31e10aa5bc6d9326fcdafde36970821eb6ceb7fdb8291fe987ff81c981e36aa2e0a2e9e761a0dd6058d6b8a
+2025-04-16 18:34:14,248 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=196e0fe5fbbc580e0a74dc4351144d4700e9c4987c31e10aa5bc6d9326fcdafde36970821eb6ceb7fdb8291fe987ff81c981e36aa2e0a2e9e761a0dd6058d6b8a
+2025-04-16 18:34:14,398 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/13__DeckersEmma_Marie_1744799654.jpg
+2025-04-16 18:34:14,398 - INFO - 已提取第 13 個履歷卡片的資訊: 13  DeckersEmma Marie
+2025-04-16 18:34:14,404 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1ab3d87b6213455895b716a16cb44b2495f1d825ade591f65d45c0c695b6bfec51647738dc91a0c5fa954e12a1092b240a4f2def4cd721bed2d8ad231c0cdde90
+2025-04-16 18:34:14,404 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1ab3d87b6213455895b716a16cb44b2495f1d825ade591f65d45c0c695b6bfec51647738dc91a0c5fa954e12a1092b240a4f2def4cd721bed2d8ad231c0cdde90
+2025-04-16 18:34:14,572 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/14__盧裕翔_1744799654.jpg
+2025-04-16 18:34:14,573 - INFO - 已提取第 14 個履歷卡片的資訊: 14  盧裕翔
+2025-04-16 18:34:14,586 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=17845e71f1a129dda44d6de2402ae00cd5f1d825ade591f65d45c0c695b6bfec5bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:34:14,586 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=17845e71f1a129dda44d6de2402ae00cd5f1d825ade591f65d45c0c695b6bfec5bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:34:14,747 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/15__郭貞君_1744799654.jpg
+2025-04-16 18:34:14,747 - INFO - 已提取第 15 個履歷卡片的資訊: 15  郭貞君
+2025-04-16 18:34:14,761 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1046f9165ba710a936d566e9fb4c7ded90e9c4987c31e10aa5bc6d9326fcdafded3d400ea83f79cd8d1a96d6f199467ddc5e32201cc4eb856602faad50046252f
+2025-04-16 18:34:14,761 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1046f9165ba710a936d566e9fb4c7ded90e9c4987c31e10aa5bc6d9326fcdafded3d400ea83f79cd8d1a96d6f199467ddc5e32201cc4eb856602faad50046252f
+2025-04-16 18:34:14,892 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/16__羅元駿_1744799654.jpg
+2025-04-16 18:34:14,892 - INFO - 已提取第 16 個履歷卡片的資訊: 16  羅元駿
+2025-04-16 18:34:14,904 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=14cb7fcbc55a9ffebad348fcaf9f02a380e9c4987c31e10aa5bc6d9326fcdafde48ae19d103cb13efb4c3bc7e5762647c9f7dfc3f98e32672ee37da94a05b79c5
+2025-04-16 18:34:14,904 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=14cb7fcbc55a9ffebad348fcaf9f02a380e9c4987c31e10aa5bc6d9326fcdafde48ae19d103cb13efb4c3bc7e5762647c9f7dfc3f98e32672ee37da94a05b79c5
+2025-04-16 18:34:15,110 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/17__劉于莎_1744799654.jpg
+2025-04-16 18:34:15,110 - INFO - 已提取第 17 個履歷卡片的資訊: 17  劉于莎
+2025-04-16 18:34:15,126 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1d01f1d77bfa4540c10e45bee6dedc1e85f1d825ade591f65d45c0c695b6bfec512d0af0270f7fce5ff2c877f7015e03914e01a347f6f81b61e12aceaa9d8dab2
+2025-04-16 18:34:15,126 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1d01f1d77bfa4540c10e45bee6dedc1e85f1d825ade591f65d45c0c695b6bfec512d0af0270f7fce5ff2c877f7015e03914e01a347f6f81b61e12aceaa9d8dab2
+2025-04-16 18:34:15,220 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/18__林群揚_1744799655.jpg
+2025-04-16 18:34:15,220 - INFO - 已提取第 18 個履歷卡片的資訊: 18  林群揚
+2025-04-16 18:34:15,230 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=10952ecfd445970b6145c22098c8c44c80e9c4987c31e10aa5bc6d9326fcdafde9472b00967f5e80b58f2653fe4a0de10b5833de4926b7be4a1abf9c30e11e1b8
+2025-04-16 18:34:15,230 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=10952ecfd445970b6145c22098c8c44c80e9c4987c31e10aa5bc6d9326fcdafde9472b00967f5e80b58f2653fe4a0de10b5833de4926b7be4a1abf9c30e11e1b8
+2025-04-16 18:34:15,345 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/19__陳廣馳_1744799655.jpg
+2025-04-16 18:34:15,345 - INFO - 已提取第 19 個履歷卡片的資訊: 19  陳廣馳
+2025-04-16 18:34:15,359 - INFO - 找到候選頭像: https://static.104.com.tw/104main/vipphp/main/img/head/photo-resume-no-photo.png
+2025-04-16 18:34:15,360 - INFO - 開始下載大頭照: https://static.104.com.tw/104main/vipphp/main/img/head/photo-resume-no-photo.png
+2025-04-16 18:34:15,400 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/20__謝惠羽_1744799655.jpg
+2025-04-16 18:34:15,400 - INFO - 已提取第 20 個履歷卡片的資訊: 20  謝惠羽
+2025-04-16 18:34:15,406 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=190e39bd8cbad94917ba183453ad3f9660e9c4987c31e10aa5bc6d9326fcdafdec861ed719d1f13ba5bb0035b6943574b31b561b6146762d85ede51ab2d328be0
+2025-04-16 18:34:15,406 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=190e39bd8cbad94917ba183453ad3f9660e9c4987c31e10aa5bc6d9326fcdafdec861ed719d1f13ba5bb0035b6943574b31b561b6146762d85ede51ab2d328be0
+2025-04-16 18:34:15,506 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/21__何秉翃_1744799655.jpg
+2025-04-16 18:34:15,506 - INFO - 已提取第 21 個履歷卡片的資訊: 21  何秉翃
+2025-04-16 18:34:15,514 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=124364a2d48a337a8293fdf7438c8b9305f1d825ade591f65d45c0c695b6bfec5bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:34:15,514 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=124364a2d48a337a8293fdf7438c8b9305f1d825ade591f65d45c0c695b6bfec5bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:34:15,626 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/22__陳瑀芋_1744799655.jpg
+2025-04-16 18:34:15,626 - INFO - 已提取第 22 個履歷卡片的資訊: 22  陳瑀芋
+2025-04-16 18:34:15,640 - INFO - 找到候選頭像: https://static.104.com.tw/104main/vipphp/main/img/head/photo-resume-no-photo.png
+2025-04-16 18:34:15,640 - INFO - 開始下載大頭照: https://static.104.com.tw/104main/vipphp/main/img/head/photo-resume-no-photo.png
+2025-04-16 18:34:15,689 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/23__張智淇_1744799655.jpg
+2025-04-16 18:34:15,689 - INFO - 已提取第 23 個履歷卡片的資訊: 23  張智淇
+2025-04-16 18:34:15,697 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1a21cb63a0bdd62753f633158455666c50e9c4987c31e10aa5bc6d9326fcdafde5746208c25c86c1120b8394e50377a36806de2e2bd94d245a2ea6afcd186572e
+2025-04-16 18:34:15,697 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1a21cb63a0bdd62753f633158455666c50e9c4987c31e10aa5bc6d9326fcdafde5746208c25c86c1120b8394e50377a36806de2e2bd94d245a2ea6afcd186572e
+2025-04-16 18:34:15,821 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/24__彭謙_1744799655.jpg
+2025-04-16 18:34:15,821 - INFO - 已提取第 24 個履歷卡片的資訊: 24  彭謙
+2025-04-16 18:34:15,828 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=19ff0e0bb6d27a3d104c70d4d08c0b3780e9c4987c31e10aa5bc6d9326fcdafde0977036180b2d18216c9a0dd96b3a866122ef9e5284b71eec4fdd3b71309d8fb
+2025-04-16 18:34:15,828 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=19ff0e0bb6d27a3d104c70d4d08c0b3780e9c4987c31e10aa5bc6d9326fcdafde0977036180b2d18216c9a0dd96b3a866122ef9e5284b71eec4fdd3b71309d8fb
+2025-04-16 18:34:16,006 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/25__張博崴_1744799655.jpg
+2025-04-16 18:34:16,006 - INFO - 已提取第 25 個履歷卡片的資訊: 25  張博崴
+2025-04-16 18:34:16,018 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=12f5db3ee5fb63c2b1a8fbe7ee5aa220b5f1d825ade591f65d45c0c695b6bfec5bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:34:16,018 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=12f5db3ee5fb63c2b1a8fbe7ee5aa220b5f1d825ade591f65d45c0c695b6bfec5bfc34adbbecc370b843f18c3d0a36cf058e30ce51206af30f35445a33951b58a
+2025-04-16 18:34:16,134 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/26__葉正芳_1744799656.jpg
+2025-04-16 18:34:16,134 - INFO - 已提取第 26 個履歷卡片的資訊: 26  葉正芳
+2025-04-16 18:34:16,145 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=172b4597aadea0f0db011d2c0d81869720e9c4987c31e10aa5bc6d9326fcdafdec05e91c2ab8606d3f4a6ed58be563ad44c7883fb6ce58b603cd6303a1fdcb652
+2025-04-16 18:34:16,145 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=172b4597aadea0f0db011d2c0d81869720e9c4987c31e10aa5bc6d9326fcdafdec05e91c2ab8606d3f4a6ed58be563ad44c7883fb6ce58b603cd6303a1fdcb652
+2025-04-16 18:34:16,252 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/27__洪家偉_1744799656.jpg
+2025-04-16 18:34:16,252 - INFO - 已提取第 27 個履歷卡片的資訊: 27  洪家偉
+2025-04-16 18:34:16,261 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=196354885de1047d1718c5714c462fbae0e9c4987c31e10aa5bc6d9326fcdafde28f38c878ac88d3bc090921faddb101815011675264632bbc93c2de0dade57bb
+2025-04-16 18:34:16,261 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=196354885de1047d1718c5714c462fbae0e9c4987c31e10aa5bc6d9326fcdafde28f38c878ac88d3bc090921faddb101815011675264632bbc93c2de0dade57bb
+2025-04-16 18:34:16,389 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/28__王喬_1744799656.jpg
+2025-04-16 18:34:16,389 - INFO - 已提取第 28 個履歷卡片的資訊: 28  王喬
+2025-04-16 18:34:16,395 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1b751b85d2f7b094f973423247539cbf75f1d825ade591f65d45c0c695b6bfec5b9b781036a052fb280c2cbca6ac35c7252d86c75beb860704a84fd6e2a0f5797
+2025-04-16 18:34:16,395 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1b751b85d2f7b094f973423247539cbf75f1d825ade591f65d45c0c695b6bfec5b9b781036a052fb280c2cbca6ac35c7252d86c75beb860704a84fd6e2a0f5797
+2025-04-16 18:34:16,503 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/29__蘇智煒_1744799656.jpg
+2025-04-16 18:34:16,503 - INFO - 已提取第 29 個履歷卡片的資訊: 29  蘇智煒
+2025-04-16 18:34:16,513 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=10ece0004cdfef3f6a139dabea5901acb0e9c4987c31e10aa5bc6d9326fcdafde284a742c1da7763600522114b84d57ad0dedb36833bbd513f69cf5fdfb625893
+2025-04-16 18:34:16,513 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=10ece0004cdfef3f6a139dabea5901acb0e9c4987c31e10aa5bc6d9326fcdafde284a742c1da7763600522114b84d57ad0dedb36833bbd513f69cf5fdfb625893
+2025-04-16 18:34:16,612 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/30__陳冠樺_1744799656.jpg
+2025-04-16 18:34:16,613 - INFO - 已提取第 30 個履歷卡片的資訊: 30  陳冠樺
+2025-04-16 18:34:16,621 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1dffc2f46edea4f745c1705ce9b0af32a5f1d825ade591f65d45c0c695b6bfec5a702942b2ef041fe9a4a9ad5058740c4675e864f8b0ac8b803a5cb447a5ae323
+2025-04-16 18:34:16,622 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1dffc2f46edea4f745c1705ce9b0af32a5f1d825ade591f65d45c0c695b6bfec5a702942b2ef041fe9a4a9ad5058740c4675e864f8b0ac8b803a5cb447a5ae323
+2025-04-16 18:34:16,737 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/31__吳俊明_1744799656.jpg
+2025-04-16 18:34:16,738 - INFO - 已提取第 31 個履歷卡片的資訊: 31  吳俊明
+2025-04-16 18:34:16,748 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=14e4955d3e1355102774a8c74666980d90e9c4987c31e10aa5bc6d9326fcdafde3385ddf3c4c42234c74dfdd89e6729a940d95b82610fa179672219f594ee9697
+2025-04-16 18:34:16,748 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=14e4955d3e1355102774a8c74666980d90e9c4987c31e10aa5bc6d9326fcdafde3385ddf3c4c42234c74dfdd89e6729a940d95b82610fa179672219f594ee9697
+2025-04-16 18:34:16,876 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/32__鄧翔運_1744799656.jpg
+2025-04-16 18:34:16,877 - INFO - 已提取第 32 個履歷卡片的資訊: 32  鄧翔運
+2025-04-16 18:34:16,889 - INFO - 找到104特定格式頭像: https://asset.vip.104.com.tw/download/webHeadShot?v=1ac06916368265a9e0a21c6812da72f680e9c4987c31e10aa5bc6d9326fcdafde39457084f65b263b08d331c1f58f0cbc793c0f3cea015498412fbb02629e9f00
+2025-04-16 18:34:16,889 - INFO - 開始下載大頭照: https://asset.vip.104.com.tw/download/webHeadShot?v=1ac06916368265a9e0a21c6812da72f680e9c4987c31e10aa5bc6d9326fcdafde39457084f65b263b08d331c1f58f0cbc793c0f3cea015498412fbb02629e9f00
+2025-04-16 18:34:17,126 - INFO - 大頭照下載成功: resume_data_20250416_183402/profile_photos/33__侯伯翰_1744799656.jpg
+2025-04-16 18:34:17,126 - INFO - 已提取第 33 個履歷卡片的資訊: 33  侯伯翰
+2025-04-16 18:34:17,128 - ERROR - 提取第 34 個履歷卡片時發生錯誤: Page.evaluate: Target page, context or browser has been closed
+2025-04-16 18:34:17,128 - ERROR - 提取第 35 個履歷卡片時發生錯誤: Page.evaluate: Target page, context or browser has been closed
+2025-04-16 18:34:17,129 - ERROR - 提取第 36 個履歷卡片時發生錯誤: Page.evaluate: Target page, context or browser has been closed
+2025-04-16 18:34:17,130 - ERROR - 提取第 37 個履歷卡片時發生錯誤: Page.evaluate: Target page, context or browser has been closed
+2025-04-16 18:34:17,131 - ERROR - 提取第 38 個履歷卡片時發生錯誤: Page.evaluate: Target page, context or browser has been closed
+2025-04-16 18:34:17,131 - ERROR - 提取第 39 個履歷卡片時發生錯誤: Page.evaluate: Target page, context or browser has been closed
+2025-04-16 18:34:17,132 - ERROR - 提取第 40 個履歷卡片時發生錯誤: Page.evaluate: Target page, context or browser has been closed
+2025-04-16 18:34:17,133 - ERROR - 提取第 41 個履歷卡片時發生錯誤: Page.evaluate: Target page, context or browser has been closed
+2025-04-16 18:34:17,134 - ERROR - 提取第 42 個履歷卡片時發生錯誤: Page.evaluate: Target page, context or browser has been closed
+2025-04-16 18:34:17,135 - ERROR - 提取第 43 個履歷卡片時發生錯誤: Page.evaluate: Target page, context or browser has been closed
+2025-04-16 18:34:17,136 - ERROR - 提取第 44 個履歷卡片時發生錯誤: Page.evaluate: Target page, context or browser has been closed
+2025-04-16 18:34:17,136 - ERROR - 提取第 45 個履歷卡片時發生錯誤: Page.evaluate: Target page, context or browser has been closed
+2025-04-16 18:34:17,137 - ERROR - 提取第 46 個履歷卡片時發生錯誤: Page.evaluate: Target page, context or browser has been closed
+2025-04-16 18:34:17,138 - ERROR - 提取第 47 個履歷卡片時發生錯誤: Page.evaluate: Target page, context or browser has been closed
+2025-04-16 18:34:17,138 - ERROR - 提取第 48 個履歷卡片時發生錯誤: Page.evaluate: Target page, context or browser has been closed
+2025-04-16 18:34:17,139 - ERROR - 提取第 49 個履歷卡片時發生錯誤: Page.evaluate: Target page, context or browser has been closed
+2025-04-16 18:34:17,140 - ERROR - 提取第 50 個履歷卡片時發生錯誤: Page.evaluate: Target page, context or browser has been closed
+2025-04-16 18:34:17,216 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/1__沈浩丞_1744799652.jpg
+2025-04-16 18:34:17,225 - INFO - 已將照片插入到Excel第2行
+2025-04-16 18:34:17,226 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/2__王建德_1744799652.jpg
+2025-04-16 18:34:17,227 - INFO - 已將照片插入到Excel第3行
+2025-04-16 18:34:17,227 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/3__林源韋_1744799652.jpg
+2025-04-16 18:34:17,229 - INFO - 已將照片插入到Excel第4行
+2025-04-16 18:34:17,229 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/4__黃宗漢_1744799653.jpg
+2025-04-16 18:34:17,229 - INFO - 已將照片插入到Excel第5行
+2025-04-16 18:34:17,229 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/5__王彙智_1744799653.jpg
+2025-04-16 18:34:17,230 - INFO - 已將照片插入到Excel第6行
+2025-04-16 18:34:17,230 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/6__黃青雲_1744799653.jpg
+2025-04-16 18:34:17,230 - INFO - 已將照片插入到Excel第7行
+2025-04-16 18:34:17,230 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/7__邱子軒_1744799653.jpg
+2025-04-16 18:34:17,231 - INFO - 已將照片插入到Excel第8行
+2025-04-16 18:34:17,231 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/8__潘昱良_1744799653.jpg
+2025-04-16 18:34:17,232 - INFO - 已將照片插入到Excel第9行
+2025-04-16 18:34:17,232 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/9__HuangWei-Cheng_1744799653.jpg
+2025-04-16 18:34:17,233 - INFO - 已將照片插入到Excel第10行
+2025-04-16 18:34:17,233 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/10__蔡易延_1744799654.jpg
+2025-04-16 18:34:17,235 - INFO - 已將照片插入到Excel第11行
+2025-04-16 18:34:17,235 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/11__葉家宏_1744799654.jpg
+2025-04-16 18:34:17,235 - INFO - 已將照片插入到Excel第12行
+2025-04-16 18:34:17,235 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/12__李明翰_1744799654.jpg
+2025-04-16 18:34:17,235 - INFO - 已將照片插入到Excel第13行
+2025-04-16 18:34:17,235 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/13__DeckersEmma_Marie_1744799654.jpg
+2025-04-16 18:34:17,237 - INFO - 已將照片插入到Excel第14行
+2025-04-16 18:34:17,237 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/14__盧裕翔_1744799654.jpg
+2025-04-16 18:34:17,238 - INFO - 已將照片插入到Excel第15行
+2025-04-16 18:34:17,238 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/15__郭貞君_1744799654.jpg
+2025-04-16 18:34:17,240 - INFO - 已將照片插入到Excel第16行
+2025-04-16 18:34:17,240 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/16__羅元駿_1744799654.jpg
+2025-04-16 18:34:17,241 - INFO - 已將照片插入到Excel第17行
+2025-04-16 18:34:17,241 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/17__劉于莎_1744799654.jpg
+2025-04-16 18:34:17,242 - INFO - 已將照片插入到Excel第18行
+2025-04-16 18:34:17,242 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/18__林群揚_1744799655.jpg
+2025-04-16 18:34:17,242 - INFO - 已將照片插入到Excel第19行
+2025-04-16 18:34:17,242 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/19__陳廣馳_1744799655.jpg
+2025-04-16 18:34:17,243 - INFO - 已將照片插入到Excel第20行
+2025-04-16 18:34:17,243 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/20__謝惠羽_1744799655.jpg
+2025-04-16 18:34:17,244 - INFO - 已將照片插入到Excel第21行
+2025-04-16 18:34:17,244 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/21__何秉翃_1744799655.jpg
+2025-04-16 18:34:17,245 - INFO - 已將照片插入到Excel第22行
+2025-04-16 18:34:17,245 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/22__陳瑀芋_1744799655.jpg
+2025-04-16 18:34:17,246 - INFO - 已將照片插入到Excel第23行
+2025-04-16 18:34:17,246 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/23__張智淇_1744799655.jpg
+2025-04-16 18:34:17,246 - INFO - 已將照片插入到Excel第24行
+2025-04-16 18:34:17,246 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/24__彭謙_1744799655.jpg
+2025-04-16 18:34:17,247 - INFO - 已將照片插入到Excel第25行
+2025-04-16 18:34:17,247 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/25__張博崴_1744799655.jpg
+2025-04-16 18:34:17,249 - INFO - 已將照片插入到Excel第26行
+2025-04-16 18:34:17,249 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/26__葉正芳_1744799656.jpg
+2025-04-16 18:34:17,249 - INFO - 已將照片插入到Excel第27行
+2025-04-16 18:34:17,249 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/27__洪家偉_1744799656.jpg
+2025-04-16 18:34:17,250 - INFO - 已將照片插入到Excel第28行
+2025-04-16 18:34:17,250 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/28__王喬_1744799656.jpg
+2025-04-16 18:34:17,251 - INFO - 已將照片插入到Excel第29行
+2025-04-16 18:34:17,251 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/29__蘇智煒_1744799656.jpg
+2025-04-16 18:34:17,253 - INFO - 已將照片插入到Excel第30行
+2025-04-16 18:34:17,253 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/30__陳冠樺_1744799656.jpg
+2025-04-16 18:34:17,254 - INFO - 已將照片插入到Excel第31行
+2025-04-16 18:34:17,254 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/31__吳俊明_1744799656.jpg
+2025-04-16 18:34:17,254 - INFO - 已將照片插入到Excel第32行
+2025-04-16 18:34:17,254 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/32__鄧翔運_1744799656.jpg
+2025-04-16 18:34:17,255 - INFO - 已將照片插入到Excel第33行
+2025-04-16 18:34:17,255 - INFO - 處理照片: resume_data_20250416_183402/profile_photos/33__侯伯翰_1744799656.jpg
+2025-04-16 18:34:17,257 - INFO - 已將照片插入到Excel第34行
+2025-04-16 18:34:17,265 - INFO - 已保存含照片的Excel文件: resume_data_20250416_183402/履歷資料_1744799657.xlsx
+2025-04-16 18:34:17,267 - INFO - 已保存履歷資料至JSON: resume_data_20250416_183402/履歷資料_1744799657.json
+2025-04-16 18:34:17,448 - INFO - 瀏覽器已關閉

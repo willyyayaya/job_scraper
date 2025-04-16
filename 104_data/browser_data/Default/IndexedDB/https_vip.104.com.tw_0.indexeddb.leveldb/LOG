@@ -1,6 +1,15 @@
-2025/04/16-18:29:33.255 8703 Reusing MANIFEST /Users/willy/Desktop/爬蟲/job_scraper/104_data/browser_data/Default/IndexedDB/https_vip.104.com.tw_0.indexeddb.leveldb/MANIFEST-000001
-2025/04/16-18:29:33.256 8703 Recovering log #22
-2025/04/16-18:29:33.256 8703 Reusing old log /Users/willy/Desktop/爬蟲/job_scraper/104_data/browser_data/Default/IndexedDB/https_vip.104.com.tw_0.indexeddb.leveldb/000022.log 
-2025/04/16-18:29:33.256 8703 Delete type=2 #20
-2025/04/16-18:29:33.361 a303 Manual compaction at level-0 from '\x00\x0b\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x0c\x00\x00\x00' @ 0 : 0; will stop at (end)
-2025/04/16-18:29:38.263 f703 Manual compaction at level-0 from '\x00\x0c\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x0d\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/04/16-18:34:04.388 b403 Reusing MANIFEST /Users/willy/Desktop/爬蟲/job_scraper/104_data/browser_data/Default/IndexedDB/https_vip.104.com.tw_0.indexeddb.leveldb/MANIFEST-000001
+2025/04/16-18:34:04.388 b403 Recovering log #26
+2025/04/16-18:34:04.388 b403 Reusing old log /Users/willy/Desktop/爬蟲/job_scraper/104_data/browser_data/Default/IndexedDB/https_vip.104.com.tw_0.indexeddb.leveldb/000026.log 
+2025/04/16-18:34:04.389 b403 Delete type=2 #24
+2025/04/16-18:34:04.450 f503 Manual compaction at level-0 from '\x00\x0f\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x10\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/04/16-18:34:07.603 f503 Level-0 table #31: started
+2025/04/16-18:34:07.605 f503 Level-0 table #31: 1051 bytes OK
+2025/04/16-18:34:07.608 f503 Delete type=0 #26
+2025/04/16-18:34:07.608 a703 Manual compaction at level-0 from '\x00\x10\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x11\x00\x00\x00' @ 0 : 0; will stop at '\x00\x10\x00\x00\x05' @ 427 : 1
+2025/04/16-18:34:07.608 a703 Compacting 1@0 + 1@1 files
+2025/04/16-18:34:07.608 a703 Generated table #32@0: 88 keys, 2858 bytes
+2025/04/16-18:34:07.608 a703 Compacted 1@0 + 1@1 files => 2858 bytes
+2025/04/16-18:34:07.609 a703 compacted to: files[ 0 1 1 0 0 0 0 ]
+2025/04/16-18:34:07.609 a703 Delete type=2 #31
+2025/04/16-18:34:07.610 a703 Manual compaction at level-0 from '\x00\x10\x00\x00\x05' @ 427 : 1 .. '\x00\x11\x00\x00\x00' @ 0 : 0; will stop at (end)
