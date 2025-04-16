@@ -1,0 +1,14 @@
+2025/04/16-18:17:23.090 8203 Reusing MANIFEST /Users/willy/Desktop/爬蟲/job_scraper/104_data/browser_data/Default/IndexedDB/https_vip.104.com.tw_0.indexeddb.leveldb/MANIFEST-000001
+2025/04/16-18:17:23.090 8203 Recovering log #18
+2025/04/16-18:17:23.090 8203 Reusing old log /Users/willy/Desktop/爬蟲/job_scraper/104_data/browser_data/Default/IndexedDB/https_vip.104.com.tw_0.indexeddb.leveldb/000018.log 
+2025/04/16-18:17:23.091 8203 Delete type=2 #16
+2025/04/16-18:17:23.263 fa03 Level-0 table #23: started
+2025/04/16-18:17:23.264 fa03 Level-0 table #23: 664 bytes OK
+2025/04/16-18:17:23.265 fa03 Delete type=0 #18
+2025/04/16-18:17:23.266 8203 Manual compaction at level-0 from '\x00\x0a\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x0b\x00\x00\x00' @ 0 : 0; will stop at '\x00\x0a\x00\x00\x05' @ 313 : 1
+2025/04/16-18:17:23.266 8203 Compacting 1@0 + 1@1 files
+2025/04/16-18:17:23.266 8203 Generated table #24@0: 86 keys, 2836 bytes
+2025/04/16-18:17:23.266 8203 Compacted 1@0 + 1@1 files => 2836 bytes
+2025/04/16-18:17:23.267 8203 compacted to: files[ 0 1 1 0 0 0 0 ]
+2025/04/16-18:17:23.267 8203 Delete type=2 #23
+2025/04/16-18:17:23.267 8203 Manual compaction at level-0 from '\x00\x0a\x00\x00\x05' @ 313 : 1 .. '\x00\x0b\x00\x00\x00' @ 0 : 0; will stop at (end)

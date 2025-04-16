@@ -7,10 +7,8 @@ import json
 from datetime import datetime
 from playwright.async_api import async_playwright
 import tempfile
-import requests
 import shutil
-from urllib.parse import urlparse, quote
-import urllib3
+import re
 
 # 設置日誌
 logging.basicConfig(
@@ -34,7 +32,11 @@ class ResumeScraperConfig:
         self.vip_url = "https://vip.104.com.tw/"  # VIP系統首頁
         self.search_url = "https://vip.104.com.tw/search"  # 搜尋頁面URL
         
-        # 建立輸出目錄
+        # 固定的狀態保存目錄（避免每次運行都建立新目錄）
+        self.data_dir = "104_data"
+        os.makedirs(self.data_dir, exist_ok=True)
+        
+        # 每次運行的結果目錄
         self.timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         self.output_dir = f"resume_data_{self.timestamp}"
         os.makedirs(self.output_dir, exist_ok=True)
@@ -49,22 +51,61 @@ class ResumeScraper:
         self.page = None
     
     async def initialize(self):
-        """初始化瀏覽器"""
+        """初始化瀏覽器，使用持久化上下文保存登入狀態"""
         playwright = await async_playwright().start()
-        self.browser = await playwright.chromium.launch(headless=False)
-        self.context = await self.browser.new_context(
+        
+        # 建立用戶資料目錄
+        user_data_dir = os.path.join(self.config.data_dir, "browser_data")
+        os.makedirs(user_data_dir, exist_ok=True)
+        
+        # 使用持久化上下文替代傳統的 launch + new_context 方式
+        self.browser = await playwright.chromium.launch_persistent_context(
+            user_data_dir=user_data_dir,
+            headless=False,
+            accept_downloads=True,
+            bypass_csp=True,
+            slow_mo=500,  # 適當放慢操作速度，避免被反爬
+            args=[
+                '--disable-blink-features=AutomationControlled',
+                '--disable-web-security',
+                '--disable-features=IsolateOrigins,site-per-process'
+            ],
             viewport={"width": 1280, "height": 800},
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            locale="zh-TW",
+            timezone_id="Asia/Taipei",
+            extra_http_headers={
+                "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.8"
+            }
         )
-        self.page = await self.context.new_page()
-        logger.info("瀏覽器初始化成功")
+        
+        # 修改WebDriver相關屬性，避免被檢測
+        await self.browser.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => false,
+            });
+            window.chrome = { runtime: {} };
+        """)
+        
+        # 在持久化上下文中創建頁面
+        self.page = await self.browser.new_page()
+        logger.info("瀏覽器初始化成功，使用持久化上下文模式")
     
     async def login(self):
-        """登入至VIP系統"""
+        """改進的登入流程，利用持久化上下文自動管理登入狀態"""
         try:
             # 步驟1: 進入VIP首頁
             await self.page.goto(self.config.vip_url)
             logger.info("已進入VIP首頁")
+            
+            # 等待頁面加載
+            await self.page.wait_for_load_state('networkidle', timeout=15000)
+            
+            # 檢查是否已經登入
+            is_logged_in = await self.check_if_logged_in()
+            if is_logged_in:
+                logger.info("✅ 檢測到您已經登入，無需重新驗證!")
+                return True
             
             # 步驟2: 檢查是否已經在repeatLogin頁面
             current_url = self.page.url
@@ -125,6 +166,12 @@ class ResumeScraper:
                     await self.page.goto("https://vip.104.com.tw/index/index")
                     await asyncio.sleep(5)
             
+            # 再次檢查是否已經登入
+            is_logged_in = await self.check_if_logged_in()
+            if is_logged_in:
+                logger.info("✅ 通過重複登入處理後已成功登入!")
+                return True
+            
             # 步驟3: 點擊登入按鈕
             login_button_selectors = [
                 'a:text("登入")', 
@@ -184,8 +231,8 @@ class ResumeScraper:
                 return True
             
             # 步驟11: 等待用戶輸入驗證碼
-            logger.info("請等待10秒，系統正在發送驗證碼到您的信箱...")
-            for i in range(10, 0, -5):
+            logger.info("請等待3秒，系統正在發送驗證碼到您的信箱...")
+            for i in range(3, 0, -5):
                 logger.info(f"剩餘等待時間: {i} 秒")
                 await asyncio.sleep(5)
             
@@ -340,14 +387,13 @@ class ResumeScraper:
             return False
     
     async def extract_results(self):
-        """從搜尋結果頁面提取履歷卡片信息，包含大頭照和更多求職者資訊"""
+        """從搜尋結果頁面提取履歷卡片信息，使用字符串匹配方式提取，並下載大頭照到Excel"""
         try:
-            logger.info("開始提取履歷卡片信息，包含大頭照")
+            logger.info("開始提取搜尋頁面的履歷卡片信息")
             
             # 建立照片存儲目錄
             photos_dir = os.path.join(self.config.output_dir, "profile_photos")
             os.makedirs(photos_dir, exist_ok=True)
-            logger.info(f"建立照片存儲目錄: {photos_dir}")
             
             # 嘗試使用多種選擇器找到履歷卡片
             card_selectors = [
@@ -363,6 +409,7 @@ class ResumeScraper:
             ]
             
             resume_cards = []
+            photo_files = []  # 儲存照片文件路徑和對應的索引
             
             for selector in card_selectors:
                 try:
@@ -373,81 +420,44 @@ class ResumeScraper:
                         # 從每個卡片中提取信息
                         for i, card in enumerate(cards):
                             try:
-                                # 獲取卡片的HTML以便分析
+                                # 獲取卡片的HTML和文本內容
                                 card_html = await self.page.evaluate('(element) => element.outerHTML', card)
+                                card_text = await self.page.evaluate('(element) => element.textContent', card)
                                 
-                                # 提取求職者資訊
-                                # 1. 姓名
-                                name_selectors = ['.name', 'h2', '.title', '[data-qa-id="name"]']
-                                name = await self.extract_text_from_element(card, name_selectors)
+                                # 使用字串比對從文本中提取各種信息
+                                resume_info = self.extract_info_from_text(card_text)
                                 
-                                # 2. 職稱/職位
-                                title_selectors = ['.job-title', '.position', '[data-qa-id="title"]', '.position-name']
-                                title = await self.extract_text_from_element(card, title_selectors)
-                                
-                                # 3. 工作經驗
-                                exp_selectors = ['.experience', '.year', '[data-qa-id="experience"]', '.exp-year']
-                                experience = await self.extract_text_from_element(card, exp_selectors)
-                                
-                                # 4. 學歷
-                                edu_selectors = ['.education', '.school', '[data-qa-id="education"]', '.edu']
-                                education = await self.extract_text_from_element(card, edu_selectors)
-                                
-                                # 5. 技能
-                                skill_selectors = ['.skills', '.tags', '[data-qa-id="skills"]', '.skill-tags']
-                                skills = await self.extract_text_from_element(card, skill_selectors)
-                                
-                                # 6. 要求待遇
-                                salary_selectors = ['.salary', '.expected-salary', '[data-qa-id="salary"]']
-                                salary = await self.extract_text_from_element(card, salary_selectors)
-                                
-                                # 7. 大頭照URL
+                                # 獲取大頭照URL
                                 photo_url = await self.extract_photo_url(card)
+                                resume_info['photo_url'] = photo_url
                                 
-                                # 下載大頭照
+                                # 下載照片
                                 if photo_url:
                                     try:
-                                        # 使用姓名(或索引)和時間戳作為文件名
-                                        safe_name = name.replace(' ', '_') if name else f'person_{i}'
-                                        filename = f"{safe_name}_{int(time.time())}.gif"  # 使用gif作為預設擴展名
-                                        filename = self.sanitize_filename(filename)  # 確保文件名有效
+                                        # 使用姓名(或索引)作為文件名的一部分
+                                        name_value = resume_info.get('name')
+                                        if name_value:
+                                            safe_name = name_value.replace(' ', '_')
+                                        else:
+                                            safe_name = f'person_{i}'
+                                        
+                                        filename = f"{safe_name}_{int(time.time())}.jpg"
+                                        filename = self.sanitize_filename(filename)
                                         photo_path = os.path.join(photos_dir, filename)
                                         
-                                        # 下載照片，增加等待時間
-                                        logger.info(f"準備下載大頭照: {safe_name}")
-                                        download_success = await self.download_photo(photo_url, photo_path)
-                                        
-                                        if download_success:
-                                            logger.info(f"已成功下載大頭照: {photo_path}")
+                                        # 下載照片
+                                        success = await self.download_photo(photo_url, photo_path)
+                                        if success:
+                                            resume_info['photo_path'] = photo_path
+                                            photo_files.append((i + 1, photo_path))  # 記錄照片路徑和對應的行索引
                                         else:
-                                            logger.warning(f"下載大頭照失敗: {photo_url}")
-                                            photo_path = None
+                                            logger.warning(f"下載照片失敗: {photo_url}")
+                                        
                                     except Exception as photo_error:
-                                        logger.error(f"下載大頭照過程中發生錯誤: {photo_error}")
-                                        photo_path = None
-                                else:
-                                    logger.info(f"未找到第 {i+1} 個履歷的大頭照URL")
-                                    photo_path = None
-                                
-                                # 8. 履歷詳情鏈接
-                                profile_url = await self.extract_profile_url(card)
-                                
-                                # 組合所有資訊
-                                resume_info = {
-                                    'name': name,
-                                    'title': title,
-                                    'experience': experience,
-                                    'education': education,
-                                    'skills': skills,
-                                    'salary': salary,
-                                    'photo_url': photo_url,
-                                    'photo_path': photo_path,
-                                    'profile_url': profile_url,
-                                    'card_html': card_html
-                                }
+                                        logger.error(f"處理大頭照過程中發生錯誤: {photo_error}")
                                 
                                 resume_cards.append(resume_info)
-                                logger.info(f"已提取第 {i+1} 個履歷卡片的資訊: {name or '未知姓名'}")
+                                logger.info(f"已提取第 {i+1} 個履歷卡片的資訊: {resume_info.get('name', '未知姓名')}")
                                 
                             except Exception as e:
                                 logger.error(f"提取第 {i+1} 個履歷卡片時發生錯誤: {e}")
@@ -462,19 +472,99 @@ class ResumeScraper:
             if resume_cards:
                 # 保存至Excel
                 df = pd.DataFrame(resume_cards)
-                # 移除HTML欄位以避免Excel檔案過大
-                if 'card_html' in df.columns:
-                    df_excel = df.drop(columns=['card_html'])
-                else:
-                    df_excel = df
+                
+                # 保存Excel並插入照片
                 excel_path = os.path.join(self.config.output_dir, f"履歷資料_{int(time.time())}.xlsx")
-                df_excel.to_excel(excel_path, index=False)
-                logger.info(f"已保存履歷資料至Excel: {excel_path}")
+                
+                try:
+                    # 使用openpyxl保存Excel並插入圖片
+                    import openpyxl
+                    from openpyxl.drawing.image import Image
+                    from PIL import Image as PILImage
+                    import io
+                    
+                    # 先將dataframe保存為Excel
+                    df.to_excel(excel_path, index=False, engine='openpyxl')
+                    
+                    # 打開Excel文件以插入圖片
+                    wb = openpyxl.load_workbook(excel_path)
+                    ws = wb.active
+                    
+                    # 找到並處理圖片列
+                    # 找到 "photo_url" 列的索引
+                    photo_col = None
+                    for col_idx, cell in enumerate(ws[1], start=1):
+                        if cell.value == "photo_url" or cell.value == "photo_path":
+                            photo_col = col_idx
+                            break
+                    
+                    if photo_col:
+                        # 增加列寬以便更好地顯示圖片
+                        ws.column_dimensions[openpyxl.utils.get_column_letter(photo_col)].width = 20
+                    
+                    # 插入照片
+                    for row_idx, photo_path in photo_files:
+                        try:
+                            logger.info(f"處理照片: {photo_path}")
+                            if os.path.exists(photo_path) and os.path.getsize(photo_path) > 100:
+                                # 使用內存方式處理圖片，避免臨時文件問題
+                                try:
+                                    # 讀取圖片到內存中
+                                    with open(photo_path, 'rb') as img_file:
+                                        img_data = img_file.read()
+                                    
+                                    # 使用BytesIO處理圖片縮放
+                                    img_io = io.BytesIO(img_data)
+                                    img = PILImage.open(img_io)
+                                    
+                                    # 調整大小，保持縱橫比
+                                    max_size = (100, 100)
+                                    img.thumbnail(max_size)
+                                    
+                                    # 將調整後的圖片保存到內存
+                                    output_io = io.BytesIO()
+                                    img_format = img.format if img.format else 'JPEG'
+                                    img.save(output_io, format=img_format)
+                                    output_io.seek(0)
+                                    
+                                    # 創建Excel圖片對象並插入
+                                    if photo_col:
+                                        # 使用內存中的圖片創建Excel圖片對象
+                                        excel_img = Image(output_io)
+                                        
+                                        # 插入圖片
+                                        cell = ws.cell(row=row_idx+1, column=photo_col)
+                                        ws.add_image(excel_img, cell.coordinate)
+                                        
+                                        # 調整行高
+                                        ws.row_dimensions[row_idx+1].height = 75
+                                        
+                                        logger.info(f"已將照片插入到Excel第{row_idx+1}行")
+                                except Exception as img_error:
+                                    logger.error(f"處理圖片內存操作時發生錯誤: {img_error}")
+                            else:
+                                logger.warning(f"照片不存在或太小: {photo_path}")
+                        except Exception as e:
+                            logger.error(f"插入照片到Excel時發生錯誤: {str(e)}")
+                    
+                    # 保存修改後的Excel
+                    wb.save(excel_path)
+                    logger.info(f"已保存含照片的Excel文件: {excel_path}")
+                    
+                except ImportError as ie:
+                    logger.warning(f"未安裝必要的庫，無法插入圖片: {ie}")
+                    # 簡單保存Excel，不包含圖片
+                    df.to_excel(excel_path, index=False)
+                    logger.info(f"已保存基本Excel: {excel_path}")
+                except Exception as excel_error:
+                    logger.error(f"生成Excel時發生錯誤: {excel_error}")
+                    # 出錯時簡單保存
+                    df.to_excel(excel_path, index=False)
+                    logger.info(f"已保存基本Excel: {excel_path}")
                 
                 # 保存至JSON
                 json_path = os.path.join(self.config.output_dir, f"履歷資料_{int(time.time())}.json")
                 with open(json_path, 'w', encoding='utf-8') as f:
-                    # 將DataFrame轉換為dict，以便JSON序列化
                     resume_dict = df.to_dict(orient='records')
                     json.dump(resume_dict, f, ensure_ascii=False, indent=2)
                 logger.info(f"已保存履歷資料至JSON: {json_path}")
@@ -488,17 +578,217 @@ class ResumeScraper:
             logger.error(f"提取履歷卡片時發生異常: {e}")
             return []
     
-    async def extract_text_from_element(self, parent, selectors):
-        """從父元素中提取文本"""
-        for selector in selectors:
+    def extract_info_from_text(self, text):
+        """使用直接字串比對方式從文本中提取求職者信息，處理連續字串"""
+        # 初始化結果字典
+        info = {
+            'name': None,
+            'age': None,
+            'gender': None,
+            'code': None,
+            'update_date': None,
+            'work_location': None,
+            'living_location': None,
+            'education': None,
+            'desired_job': None,
+            'experience_years': None,
+            'work_history': None
+        }
+        
+        # 將所有文本合併成一個字串（移除print）
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+        full_text = ' '.join(lines)
+        print(full_text)
+        
+        # 提取姓名 - 直接提取<a class="name word-break-all">和</a>之間的字串
+        if 'class="name word-break-all' in full_text:
             try:
-                element = await parent.query_selector(selector)
-                if element:
-                    text = await element.text_content()
-                    return text.strip()
-            except Exception:
-                continue
-        return None
+                # 使用正則表達式精確匹配class="name word-break-all"標籤中的內容
+                name_match = re.search(r'class="name word-break-all[^"]*"[^>]*>([^<]+)</a>', full_text)
+                if name_match:
+                    name_text = name_match.group(1).strip()
+                    # 確認提取的文本不是"更新日"或其他非名字內容
+                    if name_text and not any(keyword in name_text for keyword in ['更新日', '代碼', '希望工作地', '居住地']):
+                        info['name'] = name_text
+                    else:
+                        logger.warning(f"提取到的名字可能有誤: {name_text}，嘗試其他方法")
+                else:
+                    # 如果正則匹配失敗，嘗試更精確的字符串查找
+                    # 找到首個 class="name word-break-all 的位置
+                    name_tag_start = full_text.find('class="name word-break-all')
+                    if name_tag_start != -1:
+                        # 找到標籤結束的 > 位置
+                        close_tag_idx = full_text.find('>', name_tag_start)
+                        if close_tag_idx != -1:
+                            # 找到下一個 </a> 的位置
+                            end_tag_idx = full_text.find('</a>', close_tag_idx)
+                            if end_tag_idx != -1 and end_tag_idx > close_tag_idx:
+                                # 提取 > 和 </a> 之間的內容
+                                name_text = full_text[close_tag_idx+1:end_tag_idx].strip()
+                                # 驗證提取的名字
+                                if name_text and not any(keyword in name_text for keyword in ['更新日', '代碼', '希望工作地', '居住地']):
+                                    info['name'] = name_text
+            except Exception as e:
+                logger.debug(f"從HTML標籤提取名字時出錯: {e}")
+        else:
+            # 如果上述方法沒有提取到有效名字，嘗試從卡片文本的開頭部分提取名字
+            if not info['name'] or any(keyword in info['name'] for keyword in ['更新日', '代碼', '希望工作地', '居住地']):
+                # 移除HTML標籤，提取純文本
+                clean_text = re.sub(r'<[^>]+>', ' ', full_text).strip()
+                # 從純文本中提取名字，假設名字在開頭，後面跟著年齡或其他信息
+                name_age_match = re.search(r'^\s*(\S+(?:\s+\S+){0,3})\s+(\d{1,2})歲', clean_text)
+                if name_age_match:
+                    potential_name = name_age_match.group(1).strip()
+                    if potential_name and not any(keyword in potential_name for keyword in ['更新日', '代碼', '希望工作地', '居住地']):
+                        info['name'] = potential_name
+        
+        # 提取年齡
+        age_match = re.search(r'(\d{1,2})歲', full_text)
+        if age_match:
+            info['age'] = age_match.group(1) + '歲'
+        
+        # 提取性別
+        if '男' in full_text[:30]:
+            info['gender'] = '男'
+        elif '女' in full_text[:30]:
+            info['gender'] = '女'
+        
+        # 提取代碼和更新日期
+        code_match = re.search(r'代碼：(\d+)', full_text)
+        if code_match:
+            info['code'] = code_match.group(1)
+        
+        update_match = re.search(r'更新日：(\d{4}/\d{1,2}/\d{1,2})', full_text)
+        if update_match:
+            info['update_date'] = update_match.group(1)
+        
+        # 處理連續欄位的情況
+        
+        # 1. 找出所有關鍵字的位置
+        work_loc_idx = full_text.find('希望工作地')
+        living_loc_idx = full_text.find('居住地')
+        
+        # 尋找學歷關鍵字（碩士、大學、博士等）
+        edu_keywords = ['碩士', '大學', '博士', '學士', '高中', '二技', '四技', '高職']
+        edu_idx = -1
+        edu_keyword = None
+        
+        for keyword in edu_keywords:
+            idx = full_text.find(keyword)
+            if idx != -1:
+                edu_idx = idx
+                edu_keyword = keyword
+                break
+        
+        desired_job_idx = full_text.find('希望職稱')
+        exp_idx = full_text.find('工作經驗')
+        
+        # 2. 提取希望工作地
+        if work_loc_idx != -1 and living_loc_idx != -1 and work_loc_idx < living_loc_idx:
+            colon_idx = full_text.find(':', work_loc_idx)
+            if colon_idx == -1:
+                colon_idx = full_text.find('：', work_loc_idx)
+            
+            if colon_idx != -1:
+                # 希望工作地的內容從冒號之後到居住地之前
+                work_location = full_text[colon_idx+1:living_loc_idx].strip()
+                info['work_location'] = work_location
+        
+        # 3. 提取居住地
+        if living_loc_idx != -1 and edu_idx != -1 and living_loc_idx < edu_idx:
+            colon_idx = full_text.find(':', living_loc_idx)
+            if colon_idx == -1:
+                colon_idx = full_text.find('：', living_loc_idx)
+            
+            if colon_idx != -1:
+                # 居住地的內容從冒號之後到學歷之前
+                living_location = full_text[colon_idx+1:edu_idx].strip()
+                info['living_location'] = living_location
+        
+        # 4. 提取學歷
+        if edu_idx != -1 and desired_job_idx != -1 and edu_idx < desired_job_idx:
+            # 學歷的內容從學歷關鍵字開始到希望職稱之前
+            education = full_text[edu_idx:desired_job_idx].strip()
+            info['education'] = education
+        
+        # 5. 提取希望職稱
+        if desired_job_idx != -1 and desired_job_idx < exp_idx:
+            colon_idx = full_text.find(':', desired_job_idx)
+            if colon_idx == -1:
+                colon_idx = full_text.find('：', desired_job_idx)
+            
+            if colon_idx != -1:
+                # 先提取冒號後的內容
+                job_content = full_text[colon_idx+1:]
+                
+                # 尋找數字開頭的工作年資（如「1~2年工作經驗」、「3年經驗」等）
+                year_exp_match = re.search(r'[1-9][\d~]*年', job_content)
+                
+                if year_exp_match:
+                    # 如果找到數字年資，則以此為界限
+                    year_exp_pos = year_exp_match.start()
+                    desired_job = job_content[:year_exp_pos].strip()
+                else:
+                    # 如果沒找到數字年資，則仍以「工作經驗」為界限
+                    exp_pos = job_content.find('工作經驗')
+                    if exp_pos != -1:
+                        desired_job = job_content[:exp_pos].strip()
+                    else:
+                        # 如果都沒找到，就取整段內容
+                        desired_job = job_content.strip()
+                
+                info['desired_job'] = desired_job
+
+            # 5.5 提取工作時長（希望職稱與工作經驗之間的內容）
+            if desired_job_idx != -1 and exp_idx != -1 and desired_job_idx < exp_idx:
+                # 找到希望職稱後的冒號
+                colon_idx = full_text.find(':', desired_job_idx)
+                if colon_idx == -1:
+                    colon_idx = full_text.find('：', desired_job_idx)
+                
+                if colon_idx != -1 and info['desired_job']:
+                    # 計算工作時長的起始位置（希望職稱內容之後）
+                    start_pos = colon_idx + 2 + len(info['desired_job'])
+                    # 工作時長為希望職稱與工作經驗之間的內容
+                    experience_duration = full_text[start_pos:exp_idx].strip()
+                    
+                    # 設定experience_years為這段內容
+                    if experience_duration:
+                        info['experience_years'] = experience_duration
+        
+        # 6. 提取工作經驗
+        if exp_idx != -1:
+            # 提取年資信息（例如「1~2年工作經驗」）
+            exp_pattern = r'((?:[1-9][\d]*~[1-9][\d]*年|[1-9][\d]*年以[上下]|[<>][1-9][\d]*年|[1-9][\d]*年))工作經驗'
+            exp_match = re.search(exp_pattern, full_text[exp_idx:])
+            if exp_match:
+                full_exp = exp_match.group(0)  # 完整匹配，包含「工作經驗」
+                years_only = exp_match.group(1)  # 只有年資部分，如「1~2年」
+                info['experience_years'] = years_only
+                
+                # 計算工作經歷開始的位置
+                exp_full_pos = full_text.find(full_exp, exp_idx)
+                work_history_start_idx = exp_full_pos + len(full_exp)
+            else:
+                # 如果找不到特定格式，則從「工作經驗」之後開始
+                work_history_start_idx = exp_idx + len('工作經驗')
+            
+            # 提取工作經歷
+            work_history_content = full_text[work_history_start_idx:]
+            
+            # 找到邀約、儲存等操作按鈕前的文本作為工作經歷
+            action_keywords = ['邀約', '儲存', '轉寄', '備註']
+            end_idx = len(work_history_content)
+            
+            for keyword in action_keywords:
+                idx = work_history_content.find(keyword)
+                if idx != -1 and idx < end_idx:
+                    end_idx = idx
+            
+            work_history = work_history_content[:end_idx].strip()
+            info['work_history'] = work_history
+        
+        return info
     
     async def extract_photo_url(self, card):
         """從卡片中提取大頭照URL"""
@@ -543,170 +833,61 @@ class ResumeScraper:
         
         return None
     
-    async def extract_profile_url(self, card):
-        """提取履歷詳情鏈接"""
-        link_selectors = [
-            'a[href*="profile"]', 
-            'a[href*="resume"]', 
-            'a[href*="detail"]',
-            '.card a',
-            'a.card-link'
-        ]
-        
-        for selector in link_selectors:
-            try:
-                link = await card.query_selector(selector)
-                if link:
-                    href = await link.get_attribute('href')
-                    if href:
-                        # 如果是相對URL，轉換為絕對URL
-                        if href.startswith('/'):
-                            href = f"https://vip.104.com.tw{href}"
-                        return href
-            except Exception:
-                continue
-        return None
-    
     async def download_photo(self, url, save_path):
-        """改進版104大頭照下載函數 - 多重嘗試策略"""
+        """簡化的照片下載方法"""
         try:
             logger.info(f"開始下載大頭照: {url}")
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             
-            # 方法1: 使用playwright的fetch API
-            try:
-                logger.info("方法1: 使用playwright的fetch API")
-                
-                # 執行JavaScript在瀏覽器環境中下載圖片
-                result = await self.page.evaluate(f"""
-                async function() {{
-                    try {{
-                        const response = await fetch("{url}", {{
-                            method: 'GET',
-                            headers: {{
-                                'Referer': 'https://vip.104.com.tw/',
-                                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-                            }},
-                            credentials: 'include'
-                        }});
-                        
-                        if (!response.ok) throw new Error(`HTTP error: ${{response.status}}`);
-                        
-                        const buffer = await response.arrayBuffer();
-                        const bytes = new Uint8Array(buffer);
-                        return Array.from(bytes);
-                    }} catch (e) {{
-                        console.error('下載錯誤:', e);
-                        return null;
-                    }}
-                }}
-                """)
-                
-                if result:
-                    with open(save_path, 'wb') as f:
-                        f.write(bytes(result))
-                    
-                    file_size = os.path.getsize(save_path)
-                    if file_size > 100:
-                        logger.info(f"方法1成功: 檔案大小 {file_size} bytes")
-                        return True
-                    else:
-                        logger.warning(f"方法1下載的檔案太小: {file_size} bytes")
-                        os.unlink(save_path)
-            except Exception as e:
-                logger.warning(f"方法1失敗: {str(e)}")
+            # 使用curl命令下載照片
+            cookies = await self.browser.cookies()
+            cookie_str = '; '.join([f"{c['name']}={c['value']}" for c in cookies 
+                                    if 'vip.104.com.tw' in c.get('domain', '') or 
+                                    'asset.vip.104.com.tw' in c.get('domain', '')])
             
-            # 方法2: 調用系統curl命令
-            try:
-                logger.info("方法2: 使用系統curl命令")
-                import subprocess
-                
-                # 獲取所有cookie
-                cookies = await self.context.cookies()
-                cookie_str = '; '.join([f"{c['name']}={c['value']}" for c in cookies 
-                                       if 'vip.104.com.tw' in c.get('domain', '') or 
-                                          'asset.vip.104.com.tw' in c.get('domain', '')])
-                
-                # 臨時文件以避免路徑問題
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp:
-                    temp_path = temp.name
-                
-                # 構建curl命令 - 關閉SSL驗證
-                curl_cmd = [
-                    'curl', '-k', '--retry', '3', '--retry-delay', '2',
-                    '-L', url,
-                    '-H', f'Cookie: {cookie_str}',
-                    '-H', 'Referer: https://vip.104.com.tw/',
-                    '-H', 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
-                    '-o', temp_path
-                ]
-                
-                # 執行命令
-                proc = await asyncio.create_subprocess_exec(
-                    *curl_cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
-                
-                # 等待完成
-                _, stderr = await proc.communicate()
-                
-                if proc.returncode == 0 and os.path.exists(temp_path):
-                    file_size = os.path.getsize(temp_path)
-                    if file_size > 100:
-                        shutil.move(temp_path, save_path)
-                        logger.info(f"方法2成功: 檔案大小 {file_size} bytes")
-                        return True
-                    else:
-                        logger.warning(f"方法2下載的檔案太小: {file_size} bytes")
-                        os.unlink(temp_path)
+            # 創建臨時文件
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp:
+                temp_path = temp.name
+            
+            # 構建curl命令 - 關閉SSL驗證
+            curl_cmd = [
+                'curl', '-k', '--retry', '3', '--retry-delay', '2',
+                '-L', url,
+                '-H', f'Cookie: {cookie_str}',
+                '-H', 'Referer: https://vip.104.com.tw/',
+                '-H', 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+                '-o', temp_path
+            ]
+            
+            # 執行命令
+            proc = await asyncio.create_subprocess_exec(
+                *curl_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            # 等待完成
+            _, stderr = await proc.communicate()
+            
+            if proc.returncode == 0 and os.path.exists(temp_path):
+                file_size = os.path.getsize(temp_path)
+                if file_size > 100:
+                    shutil.move(temp_path, save_path)
+                    logger.info(f"大頭照下載成功: {save_path}")
+                    return True
                 else:
-                    error = stderr.decode('utf-8', errors='ignore') if stderr else "未知錯誤"
-                    logger.warning(f"方法2失敗: {error}")
-                    if os.path.exists(temp_path):
-                        os.unlink(temp_path)
-            except Exception as e:
-                logger.warning(f"方法2失敗: {str(e)}")
-                if 'temp_path' in locals() and os.path.exists(temp_path):
+                    logger.warning(f"下載的照片太小: {file_size} bytes")
+                    os.unlink(temp_path)
+            else:
+                error = stderr.decode('utf-8', errors='ignore') if stderr else "未知錯誤"
+                logger.warning(f"curl下載失敗: {error}")
+                if os.path.exists(temp_path):
                     os.unlink(temp_path)
             
-            # 方法3: 直接使用新頁面訪問並截圖
-            try:
-                logger.info("方法3: 直接訪問URL擷取圖片")
-                page = await self.context.new_page()
-                try:
-                    # 直接訪問URL並等待圖片加載
-                    await page.goto(url, timeout=30000, wait_until="networkidle")
-                    
-                    # 截圖並保存
-                    await page.screenshot(path=save_path)
-                    
-                    file_size = os.path.getsize(save_path)
-                    if file_size > 100:
-                        logger.info(f"方法3成功: 檔案大小 {file_size} bytes")
-                        return True
-                    else:
-                        logger.warning(f"方法3下載的檔案太小: {file_size} bytes")
-                        if os.path.exists(save_path):
-                            os.unlink(save_path)
-                finally:
-                    await page.close()
-            except Exception as e:
-                logger.warning(f"方法3失敗: {str(e)}")
-            
-            # 最後, 如果都失敗了，生成一個空白頭像
-            logger.info("所有方法都失敗，使用空白頭像")
-            import base64
-            # 一個1x1透明GIF
-            blank_image = base64.b64decode("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")
-            with open(save_path, 'wb') as f:
-                f.write(blank_image)
-            
-            logger.info(f"已使用空白頭像: {save_path}")
-            return True
+            return False
             
         except Exception as e:
-            logger.error(f"下載照片總體失敗: {str(e)}")
+            logger.error(f"下載照片過程中發生錯誤: {str(e)}")
             return False
     
     def sanitize_filename(self, filename):
@@ -718,7 +899,7 @@ class ResumeScraper:
         return filename
     
     async def run(self):
-        """執行完整爬蟲流程"""
+        """執行完整爬蟲流程，使用持久化上下文保存狀態"""
         try:
             # 初始化瀏覽器
             await self.initialize()
@@ -746,19 +927,60 @@ class ResumeScraper:
         except Exception as e:
             logger.error(f"爬蟲執行過程發生異常: {e}")
             return False
-        finally:
-            # 截圖最終頁面狀態
-            final_screenshot = os.path.join(self.config.output_dir, f"final_state_{int(time.time())}.png")
-            await self.page.screenshot(path=final_screenshot)
-            logger.info(f"最終頁面截圖已保存至: {final_screenshot}")
     
     async def close(self):
         """關閉瀏覽器"""
-        if self.context:
-            await self.context.close()
         if self.browser:
             await self.browser.close()
-        logger.info("瀏覽器已關閉")
+            logger.info("瀏覽器已關閉")
+        # 在持久化上下文中，context 和 browser 是同一個對象，不需要額外關閉
+
+    async def check_if_logged_in(self):
+        """檢查是否已經登入VIP系統"""
+        try:
+            # 方法1：檢查URL是否包含index/index
+            if "/index/index" in self.page.url:
+                return True
+            
+            # 方法2：檢查是否存在退出按鈕
+            logout_selectors = [
+                'a:text("登出")', 
+                'button:text("登出")',
+                '[href*="logout"]'
+            ]
+            
+            for selector in logout_selectors:
+                try:
+                    logout_element = await self.page.query_selector(selector)
+                    if logout_element:
+                        return True
+                except:
+                    continue
+            
+            # 方法3：檢查頁面是否包含用戶名稱
+            try:
+                # 嘗試提取用戶名或公司名相關元素
+                username_content = await self.page.evaluate('''() => {
+                    // 嘗試各種可能包含用戶名的元素
+                    const userElements = document.querySelectorAll('.user-name, .username, .account-name');
+                    for (const el of userElements) {
+                        if (el.textContent.trim()) {
+                            return el.textContent.trim();
+                        }
+                    }
+                    return '';
+                }''')
+                
+                if username_content and len(username_content) > 1:
+                    logger.info(f"檢測到用戶名: {username_content}")
+                    return True
+            except Exception as e:
+                logger.debug(f"檢查用戶名時出錯: {e}")
+            
+            return False
+        except Exception as e:
+            logger.error(f"檢查登入狀態時出錯: {e}")
+            return False
 
 async def main():
     """主程序"""
@@ -766,8 +988,39 @@ async def main():
     print("注意：使用本工具需遵守104相關使用條款及個人資料保護法")
     print("      僅供學習研究使用，請勿用於商業或非法用途\n")
     
-    username = input("請輸入104企業會員帳號: ")
-    password = input("請輸入104企業會員密碼: ")
+    # 檢查是否有已儲存的使用者資訊
+    config_file = "user_config.json"
+    saved_config = {}
+    
+    if os.path.exists(config_file):
+        try:
+            with open(config_file, "r", encoding="utf-8") as f:
+                saved_config = json.load(f)
+            print("找到已儲存的帳號資訊")
+        except:
+            pass
+    
+    # 詢問是否使用已儲存的帳號
+    use_saved = False
+    if saved_config.get("username"):
+        use_saved_input = input(f"是否使用已儲存的帳號 ({saved_config.get('username')})？(y/n): ")
+        use_saved = use_saved_input.lower() == 'y'
+    
+    if use_saved and saved_config.get("username") and saved_config.get("password"):
+        username = saved_config.get("username")
+        password = saved_config.get("password")
+        print(f"使用已儲存的帳號: {username}")
+    else:
+        username = input("請輸入104企業會員帳號: ")
+        password = input("請輸入104企業會員密碼: ")
+        
+        # 詢問是否記住帳號密碼
+        save_account = input("是否記住帳號密碼？(y/n): ")
+        if save_account.lower() == 'y':
+            with open(config_file, "w", encoding="utf-8") as f:
+                json.dump({"username": username, "password": password}, f)
+            print("已儲存帳號資訊")
+    
     keyword = input("請輸入搜索關鍵詞 (直接按Enter搜索全部): ")
     
     # 創建設定
@@ -801,4 +1054,4 @@ async def main():
         await scraper.close()
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())

@@ -1,0 +1,6 @@
+2025/04/16-18:29:33.255 8703 Reusing MANIFEST /Users/willy/Desktop/爬蟲/job_scraper/104_data/browser_data/Default/IndexedDB/https_vip.104.com.tw_0.indexeddb.leveldb/MANIFEST-000001
+2025/04/16-18:29:33.256 8703 Recovering log #22
+2025/04/16-18:29:33.256 8703 Reusing old log /Users/willy/Desktop/爬蟲/job_scraper/104_data/browser_data/Default/IndexedDB/https_vip.104.com.tw_0.indexeddb.leveldb/000022.log 
+2025/04/16-18:29:33.256 8703 Delete type=2 #20
+2025/04/16-18:29:33.361 a303 Manual compaction at level-0 from '\x00\x0b\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x0c\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/04/16-18:29:38.263 f703 Manual compaction at level-0 from '\x00\x0c\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x0d\x00\x00\x00' @ 0 : 0; will stop at (end)
