@@ -23,10 +23,11 @@ logger = logging.getLogger("104_resume_scraper")
 
 class ResumeScraperConfig:
     """爬蟲配置類"""
-    def __init__(self, username="", password="", search_keyword=""):
+    def __init__(self, username="", password="", search_keyword="", page_limit=1):
         self.username = username  # 104企業會員帳號
         self.password = password  # 104企業會員密碼
         self.search_keyword = search_keyword  # 搜尋關鍵字
+        self.page_limit = page_limit  # 爬取頁數限制
         
         # 網站URL
         self.vip_url = "https://vip.104.com.tw/"  # VIP系統首頁
@@ -387,7 +388,7 @@ class ResumeScraper:
             return False
     
     async def extract_results(self):
-        """從搜尋結果頁面提取履歷卡片信息，使用字符串匹配方式提取，並下載大頭照到Excel"""
+        """從搜尋結果頁面提取履歷卡片信息，支持多頁提取"""
         try:
             logger.info("開始提取搜尋頁面的履歷卡片信息")
             
@@ -395,87 +396,133 @@ class ResumeScraper:
             photos_dir = os.path.join(self.config.output_dir, "profile_photos")
             os.makedirs(photos_dir, exist_ok=True)
             
-            # 嘗試使用多種選擇器找到履歷卡片
-            card_selectors = [
-                '.resume-card',
-                '.candidate-card',
-                '.search-result-item',
-                '.list-item',
-                '[role="listitem"]',
-                '.card',
-                'article',
-                '.resumeList',
-                '.BaseCard'  # 104常用的卡片容器
-            ]
+            # 儲存所有頁面的履歷卡片和照片
+            all_resume_cards = []
+            all_photo_files = []
             
-            resume_cards = []
-            photo_files = []  # 儲存照片文件路徑和對應的索引
+            current_page = 1
             
-            for selector in card_selectors:
-                try:
-                    cards = await self.page.query_selector_all(selector)
-                    if cards and len(cards) > 0:
-                        logger.info(f"找到 {len(cards)} 個履歷卡片，使用選擇器: {selector}")
-                        
-                        # 從每個卡片中提取信息
-                        for i, card in enumerate(cards):
-                            try:
-                                # 獲取卡片的HTML和文本內容
-                                card_html = await self.page.evaluate('(element) => element.outerHTML', card)
-                                card_text = await self.page.evaluate('(element) => element.textContent', card)
-                                
-                                # 使用字串比對從文本中提取各種信息
-                                resume_info = self.extract_info_from_text(card_text)
-                                
-                                # 獲取大頭照URL
-                                photo_url = await self.extract_photo_url(card)
-                                resume_info['photo_url'] = photo_url
-                                
-                                # 下載照片
-                                if photo_url:
-                                    try:
-                                        # 使用姓名(或索引)作為文件名的一部分
-                                        name_value = resume_info.get('name')
-                                        if name_value:
-                                            safe_name = name_value.replace(' ', '_')
-                                        else:
-                                            safe_name = f'person_{i}'
-                                        
-                                        filename = f"{safe_name}_{int(time.time())}.jpg"
-                                        filename = self.sanitize_filename(filename)
-                                        photo_path = os.path.join(photos_dir, filename)
-                                        
-                                        # 下載照片
-                                        success = await self.download_photo(photo_url, photo_path)
-                                        if success:
-                                            resume_info['photo_path'] = photo_path
-                                            photo_files.append((i + 1, photo_path))  # 記錄照片路徑和對應的行索引
-                                        else:
-                                            logger.warning(f"下載照片失敗: {photo_url}")
-                                        
-                                    except Exception as photo_error:
-                                        logger.error(f"處理大頭照過程中發生錯誤: {photo_error}")
-                                
-                                resume_cards.append(resume_info)
-                                logger.info(f"已提取第 {i+1} 個履歷卡片的資訊: {resume_info.get('name', '未知姓名')}")
-                                
-                            except Exception as e:
-                                logger.error(f"提取第 {i+1} 個履歷卡片時發生錯誤: {e}")
-                        
-                        break  # 找到並處理卡片後退出循環
+            while current_page <= self.config.page_limit:
+                logger.info(f"正在處理第 {current_page}/{self.config.page_limit} 頁")
+                
+                # 儲存當前頁面的截圖
+                screenshot_path = os.path.join(self.config.output_dir, f"page_{current_page}_{int(time.time())}.png")
+                await self.page.screenshot(path=screenshot_path)
+                
+                # 嘗試使用多種選擇器找到履歷卡片
+                card_selectors = [
+                    '.resume-card',
+                    '.candidate-card',
+                    '.search-result-item',
+                    '.list-item',
+                    '[role="listitem"]',
+                    '.card',
+                    'article',
+                    '.resumeList',
+                    '.BaseCard'  # 104常用的卡片容器
+                ]
+                
+                resume_cards = []
+                photo_files = []  # 儲存照片文件路徑和對應的索引
+                
+                # 處理卡片
+                for selector in card_selectors:
+                    try:
+                        cards = await self.page.query_selector_all(selector)
+                        if cards and len(cards) > 0:
+                            logger.info(f"找到 {len(cards)} 個履歷卡片，使用選擇器: {selector}")
+                            
+                            # 從每個卡片中提取信息
+                            for i, card in enumerate(cards):
+                                try:
+                                    # 獲取卡片的HTML和文本內容
+                                    card_html = await self.page.evaluate('(element) => element.outerHTML', card)
+                                    card_text = await self.page.evaluate('(element) => element.textContent', card)
+                                    
+                                    # 使用字串比對從文本中提取各種信息
+                                    resume_info = self.extract_info_from_text(card_text)
+                                    
+                                    # 增加頁碼信息
+                                    resume_info['page_number'] = current_page
+                                    
+                                    # 獲取大頭照URL
+                                    photo_url = await self.extract_photo_url(card)
+                                    resume_info['photo_url'] = photo_url
+                                    
+                                    # 下載照片
+                                    if photo_url:
+                                        try:
+                                            # 使用姓名(或索引)作為文件名的一部分
+                                            name_value = resume_info.get('name')
+                                            if name_value:
+                                                safe_name = name_value.replace(' ', '_')
+                                            else:
+                                                safe_name = f'person_p{current_page}_{i}'
+                                            
+                                            filename = f"{safe_name}_{int(time.time())}.jpg"
+                                            filename = self.sanitize_filename(filename)
+                                            photo_path = os.path.join(photos_dir, filename)
+                                            
+                                            # 下載照片
+                                            success = await self.download_photo(photo_url, photo_path)
+                                            if success:
+                                                resume_info['photo_path'] = photo_path
+                                                # 記錄目前照片的索引，須考慮已處理的卡片數量
+                                                photo_idx = len(all_resume_cards) + len(resume_cards) + 1
+                                                photo_files.append((photo_idx, photo_path))
+                                            else:
+                                                logger.warning(f"下載照片失敗: {photo_url}")
+                                            
+                                        except Exception as photo_error:
+                                            logger.error(f"處理大頭照過程中發生錯誤: {photo_error}")
+                                    
+                                    resume_cards.append(resume_info)
+                                    logger.info(f"已提取第 {current_page} 頁第 {i+1} 個履歷卡片: {resume_info.get('name', '未知姓名')}")
+                                    
+                                except Exception as e:
+                                    logger.error(f"提取第 {current_page} 頁第 {i+1} 個履歷卡片時出錯: {e}")
+                            
+                            break  # 找到並處理卡片後退出循環
+                    except Exception as e:
+                        logger.debug(f"使用選擇器 '{selector}' 查找卡片時發生錯誤: {e}")
+                        continue
+                
+                if resume_cards:
+                    # 將當前頁的卡片信息添加到總結果中
+                    all_resume_cards.extend(resume_cards)
+                    all_photo_files.extend(photo_files)
                     
-                except Exception as e:
-                    logger.debug(f"使用選擇器 '{selector}' 查找卡片時發生錯誤: {e}")
-                    continue
+                    # 保存當前進度到臨時文件
+                    temp_df = pd.DataFrame(all_resume_cards)
+                    temp_path = os.path.join(self.config.output_dir, f"履歷資料_進度_到第{current_page}頁.xlsx")
+                    temp_df.to_excel(temp_path, index=False, engine='openpyxl')
+                    logger.info(f"已保存當前進度至: {temp_path}")
+                    
+                    # 檢查是否需要繼續提取下一頁
+                    if current_page < self.config.page_limit:
+                        has_next = await self.go_to_next_page()
+                        if has_next:
+                            current_page += 1
+                            await asyncio.sleep(3)  # 等待更長時間確保頁面已完全加載
+                        else:
+                            logger.info("沒有下一頁或進入下一頁失敗，停止提取")
+                            break
+                    else:
+                        logger.info(f"已達到設置的頁數限制 ({self.config.page_limit} 頁)，停止提取")
+                        break
+                else:
+                    logger.warning(f"第 {current_page} 頁未找到任何履歷卡片，停止提取")
+                    break
             
-            # 保存結果
-            if resume_cards:
+            # 所有頁面處理完畢，保存最終結果
+            if all_resume_cards:
                 # 保存至Excel
-                df = pd.DataFrame(resume_cards)
+                df = pd.DataFrame(all_resume_cards)
                 
                 # 保存Excel並插入照片
-                excel_path = os.path.join(self.config.output_dir, f"履歷資料_{int(time.time())}.xlsx")
+                excel_path = os.path.join(self.config.output_dir, f"履歷資料_共{current_page}頁_{int(time.time())}.xlsx")
                 
+                # 現有的Excel保存和照片插入邏輯，只需修改照片的索引計算
                 try:
                     # 使用openpyxl保存Excel並插入圖片
                     import openpyxl
@@ -503,7 +550,7 @@ class ResumeScraper:
                         ws.column_dimensions[openpyxl.utils.get_column_letter(photo_col)].width = 20
                     
                     # 插入照片
-                    for row_idx, photo_path in photo_files:
+                    for row_idx, photo_path in all_photo_files:
                         try:
                             logger.info(f"處理照片: {photo_path}")
                             if os.path.exists(photo_path) and os.path.getsize(photo_path) > 100:
@@ -563,17 +610,17 @@ class ResumeScraper:
                     logger.info(f"已保存基本Excel: {excel_path}")
                 
                 # 保存至JSON
-                json_path = os.path.join(self.config.output_dir, f"履歷資料_{int(time.time())}.json")
+                json_path = os.path.join(self.config.output_dir, f"履歷資料_共{current_page}頁_{int(time.time())}.json")
                 with open(json_path, 'w', encoding='utf-8') as f:
                     resume_dict = df.to_dict(orient='records')
                     json.dump(resume_dict, f, ensure_ascii=False, indent=2)
                 logger.info(f"已保存履歷資料至JSON: {json_path}")
                 
-                return resume_cards
+                return all_resume_cards
             else:
                 logger.warning("未找到任何履歷卡片")
                 return []
-            
+                
         except Exception as e:
             logger.error(f"提取履歷卡片時發生異常: {e}")
             return []
@@ -595,10 +642,10 @@ class ResumeScraper:
             'work_history': None
         }
         
-        # 將所有文本合併成一個字串（移除print）
+        # 將所有文本合併成一個字串
         lines = [line.strip() for line in text.split('\n') if line.strip()]
         full_text = ' '.join(lines)
-        print(full_text)
+        logger.debug(f"處理文本長度: {len(full_text)}")
         
         # 提取姓名 - 直接提取<a class="name word-break-all">和</a>之間的字串
         if 'class="name word-break-all' in full_text:
@@ -669,7 +716,7 @@ class ResumeScraper:
         living_loc_idx = full_text.find('居住地')
         
         # 尋找學歷關鍵字（碩士、大學、博士等）
-        edu_keywords = ['碩士', '大學', '博士', '學士', '高中', '二技', '四技', '高職']
+        edu_keywords = ['碩士', '大學', '博士', '學士', '高中', '二技', '四技', '高職', '專科', '二專', '三專', '四專', '五專', '五技', '四技', '三技', '二技', '一技', '國中', '學士後', '學士後二技', '學士後四技', '學士後五技', '學士後四技', '學士後三技', '學士後二技', '學士後一技']
         edu_idx = -1
         edu_keyword = None
         
@@ -982,6 +1029,106 @@ class ResumeScraper:
             logger.error(f"檢查登入狀態時出錯: {e}")
             return False
 
+    async def go_to_next_page(self):
+        """前往下一頁"""
+        try:
+            logger.info("嘗試前往下一頁")
+            
+            # 嘗試多種下一頁按鈕選擇器
+            next_page_selectors = [
+                '.paging-container a.pager_next',
+                'a.pager_next',
+                'a.next-page',
+                'a:has-text("下一頁")',
+                'button:has-text("下一頁")',
+                '.pagination .next',
+                '.pagination-next',
+                '.pagination li:last-child a:not(.disabled)',
+                '[aria-label="Next page"]',
+                '[data-qa-id="nextPage"]',
+                '.pager-next',
+                'a[rel="next"]'
+            ]
+            
+            for selector in next_page_selectors:
+                try:
+                    next_button = await self.page.query_selector(selector)
+                    if next_button and await next_button.is_visible():
+                        # 檢查按鈕是否被禁用
+                        is_disabled = await self.page.evaluate(
+                            '(element) => element.disabled || element.classList.contains("disabled") || element.getAttribute("aria-disabled") === "true"', 
+                            next_button
+                        )
+                        
+                        if not is_disabled:
+                            # 捲動到下一頁按鈕位置
+                            await next_button.scroll_into_view_if_needed()
+                            await asyncio.sleep(1)
+                            
+                            # 點擊下一頁按鈕
+                            await next_button.click()
+                            logger.info("已點擊下一頁按鈕")
+                            
+                            # 等待頁面加載
+                            await self.page.wait_for_load_state('networkidle', timeout=15000)
+                            await asyncio.sleep(3)  # 等待額外時間確保頁面載入完成
+                            
+                            # 檢查頁面是否有變化
+                            current_url = self.page.url
+                            if "page=" in current_url or "p=" in current_url:
+                                logger.info(f"成功進入下一頁：{current_url}")
+                                return True
+                            else:
+                                logger.info("頁面URL未顯示變化，檢查頁面內容是否已更新")
+                                return True
+                except Exception as e:
+                    logger.debug(f"使用選擇器 '{selector}' 點擊下一頁按鈕失敗: {e}")
+                    continue
+            
+            # 如果所有選擇器都失敗，嘗試通過URL參數直接進入下一頁
+            try:
+                current_url = self.page.url
+                page_match = re.search(r'[?&](page|p)=(\d+)', current_url)
+                
+                if page_match:
+                    # 找到頁數參數，如 page=1 或 p=1
+                    param_name = page_match.group(1)  # page 或 p
+                    current_page = int(page_match.group(2))
+                    next_page = current_page + 1
+                    
+                    # 替換頁數
+                    next_url = re.sub(
+                        f'{param_name}={current_page}', 
+                        f'{param_name}={next_page}', 
+                        current_url
+                    )
+                    
+                    logger.info(f"通過URL參數進入下一頁: {next_url}")
+                    await self.page.goto(next_url, timeout=30000)
+                    await self.page.wait_for_load_state('networkidle', timeout=15000)
+                    await asyncio.sleep(3)
+                    return True
+                else:
+                    # URL中沒有頁數參數，追加頁數參數
+                    separator = "&" if "?" in current_url else "?"
+                    next_url = f"{current_url}{separator}page=2"
+                    
+                    logger.info(f"通過增加頁數參數進入第二頁: {next_url}")
+                    await self.page.goto(next_url, timeout=30000)
+                    await self.page.wait_for_load_state('networkidle', timeout=15000)
+                    await asyncio.sleep(3)
+                    return True
+                    
+            except Exception as e:
+                logger.error(f"通過URL參數進入下一頁失敗: {e}")
+            
+            logger.warning("嘗試所有方法進入下一頁失敗，可能已經是最後一頁")
+            return False
+            
+        except Exception as e:
+            logger.error(f"前往下一頁過程中發生錯誤: {e}")
+            return False
+
 async def main():
     """主程序"""
     print("=== 104人力銀行求職者爬蟲 ===")
@@ -1023,11 +1170,24 @@ async def main():
     
     keyword = input("請輸入搜索關鍵詞 (直接按Enter搜索全部): ")
     
+    # 新增頁數輸入
+    page_limit_input = input("請輸入要爬取的頁數 (預設為1頁): ")
+    page_limit = 1
+    try:
+        if page_limit_input.strip():
+            page_limit = int(page_limit_input)
+            if page_limit < 1:
+                print("頁數必須大於0，使用預設值1頁")
+                page_limit = 1
+    except ValueError:
+        print("輸入的頁數無效，使用預設值1頁")
+    
     # 創建設定
     config = ResumeScraperConfig(
         username=username,
         password=password,
-        search_keyword=keyword
+        search_keyword=keyword,
+        page_limit=page_limit
     )
     
     # 創建爬蟲實例

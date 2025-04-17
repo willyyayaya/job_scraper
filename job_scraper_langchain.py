@@ -189,13 +189,13 @@ def create_job_analysis_chain():
         
         {job_data}
         
-        請提供以下分析：
+        請提供以下分析，嚴格遵守 JSON 格式規範，確保所有引號正確配對且使用逗號正確分隔每個鍵值對：
         1. 對每個職缺提取3-5個關鍵技能或要求
         2. 評估每個職缺的薪資是否合理
         3. 指出特別有價值或特殊的職缺機會
         4. 總結這批職缺的共同趨勢或特點
         
-        以JSON格式回覆，格式如下：
+        必須使用以下嚴格的 JSON 格式回覆，不要添加任何額外的文字說明：
         {{
           "jobs": [
             {{
@@ -210,7 +210,7 @@ def create_job_analysis_chain():
         """
     )
     
-    llm = init_llm(temperature=0.2)
+    llm = init_llm(temperature=0.1)
     
     # 準備職缺數據的函數
     def prepare_job_data(jobs):
@@ -231,12 +231,21 @@ def create_job_analysis_chain():
         
         return text
     
+    def safe_json_load(text):
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON 解析錯誤: {str(e)}")
+            logger.error(f"問題 JSON 內容: {text[:500]}...") # 記錄前500個字符用於調試
+            # 返回一個有基本結構的空結果
+            return {"jobs": [], "trends": "無法解析分析結果"}
+    
     chain = (
         {"job_data": RunnableLambda(prepare_job_data)}
         | prompt_template
         | llm
         | StrOutputParser()
-        | RunnableLambda(lambda x: json.loads(x))  # 將字符串轉為JSON
+        | RunnableLambda(safe_json_load)
     )
     
     return chain
