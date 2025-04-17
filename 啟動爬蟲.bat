@@ -1,33 +1,64 @@
 @echo off
-echo === 104人力銀行求職者爬蟲 ===
-echo 注意：使用本工具需遵守104相關使用條款及個人資料保護法
-echo       僅供學習研究使用，請勿用於商業或非法用途
+echo === 104 Resume Scraper ===
+echo Note: Using this tool requires compliance with 104 terms of service and privacy laws
+echo       For educational and research purposes only. Not for commercial or illegal use.
 
-REM 檢查是否已安裝環境
+REM 切換到批次檔所在目錄
+cd /d "%~dp0"
+echo Current directory: %CD%
+
+REM 顯示目錄內容以便診斷
+echo Directory contents:
+dir *.py
+
+REM Check if environment is installed
 if not exist venv (
-    echo 尚未安裝環境！請先運行「安裝環境.bat」
+    echo Error: Environment not installed
+    echo Please run "install_environment.bat" first
     pause
-    exit /b 1
+    exit 1
 )
 
-REM 啟用虛擬環境
-echo 正在啟動虛擬環境...
+REM Check folder permissions
+echo Checking folder permissions...
+mkdir test_permission > nul 2>&1
+if %errorlevel% neq 0 (
+    echo Error: No write permission in current folder
+    echo Please try running as administrator
+    pause
+    exit 1
+) else (
+    rmdir test_permission
+)
+
+REM Check if script exists
+if not exist company_resume_scraper.py (
+    echo Error: Scraper file not found
+    echo Please make sure "company_resume_scraper.py" is in the same folder as this batch file
+    echo File name must match exactly: company_resume_scraper.py
+    pause
+    exit 1
+)
+
+REM Activate virtual environment
+echo Activating virtual environment...
 call venv\Scripts\activate.bat
 if %errorlevel% neq 0 (
-    echo 啟動虛擬環境失敗！
+    echo Error: Failed to activate virtual environment
     pause
-    exit /b 1
+    exit 1
 )
 
-REM 運行爬蟲程式
-echo 正在運行爬蟲程式...
+REM Run scraper
+echo Running scraper...
 python company_resume_scraper.py
 if %errorlevel% neq 0 (
-    echo 爬蟲程式執行失敗！
+    echo Error: Scraper execution failed
     pause
-    exit /b 1
+    exit 1
 )
 
-REM 等待用戶按鍵結束
-echo 爬蟲結束。
+echo Scraper completed.
+echo The program will automatically close after 60 minutes if not closed manually.
+timeout /t 3600 /nobreak > nul
 pause
