@@ -9,6 +9,14 @@ from playwright.async_api import async_playwright
 import tempfile
 import shutil
 import re
+from urllib.parse import quote, unquote
+from playwright.async_api import TimeoutError
+import traceback
+from io import BytesIO
+import base64
+import requests
+from PIL import Image
+from job_scraper_final import clean_text_for_excel
 
 # 設置日誌
 logging.basicConfig(
@@ -494,6 +502,12 @@ class ResumeScraper:
                     
                     # 保存當前進度到臨時文件
                     temp_df = pd.DataFrame(all_resume_cards)
+                    
+                    # 清理數據以防止Excel錯誤
+                    for column in temp_df.columns:
+                        if temp_df[column].dtype == 'object':  # 只處理字符串類型的列
+                            temp_df[column] = temp_df[column].apply(lambda x: clean_text_for_excel(x) if isinstance(x, str) else x)
+                    
                     temp_path = os.path.join(self.config.output_dir, f"履歷資料_進度_到第{current_page}頁.xlsx")
                     temp_df.to_excel(temp_path, index=False, engine='openpyxl')
                     logger.info(f"已保存當前進度至: {temp_path}")
@@ -516,8 +530,13 @@ class ResumeScraper:
             
             # 所有頁面處理完畢，保存最終結果
             if all_resume_cards:
-                # 保存至Excel
+                # 創建DataFrame
                 df = pd.DataFrame(all_resume_cards)
+                
+                # 清理數據以防止Excel錯誤
+                for column in df.columns:
+                    if df[column].dtype == 'object':  # 只處理字符串類型的列
+                        df[column] = df[column].apply(lambda x: clean_text_for_excel(x) if isinstance(x, str) else x)
                 
                 # 保存Excel並插入照片
                 excel_path = os.path.join(self.config.output_dir, f"履歷資料_共{current_page}頁_{int(time.time())}.xlsx")
@@ -606,8 +625,30 @@ class ResumeScraper:
                 except Exception as excel_error:
                     logger.error(f"生成Excel時發生錯誤: {excel_error}")
                     # 出錯時簡單保存
-                    df.to_excel(excel_path, index=False)
-                    logger.info(f"已保存基本Excel: {excel_path}")
+                    try:
+                        # 再次嘗試清理數據
+                        for column in df.columns:
+                            if df[column].dtype == 'object':
+                                df[column] = df[column].apply(lambda x: clean_text_for_excel(x) if isinstance(x, str) else x)
+                        df.to_excel(excel_path, index=False)
+                        logger.info(f"已保存基本Excel: {excel_path}")
+                    except Exception as final_error:
+                        logger.error(f"最終保存嘗試失敗: {final_error}")
+                        # 保存純JSON格式數據
+                        json_path = os.path.join(self.config.output_dir, f"履歷資料_共{current_page}頁_緊急備份_{int(time.time())}.json")
+                        with open(json_path, 'w', encoding='utf-8') as f:
+                            # 先清理數據避免JSON序列化失敗
+                            clean_data = []
+                            for card in all_resume_cards:
+                                clean_card = {}
+                                for key, value in card.items():
+                                    if isinstance(value, str):
+                                        clean_card[key] = clean_text_for_excel(value)
+                                    else:
+                                        clean_card[key] = value
+                                clean_data.append(clean_card)
+                            
+                            json.dump(clean_data, f, ensure_ascii=False, indent=2)
                 
                 # 保存至JSON
                 json_path = os.path.join(self.config.output_dir, f"履歷資料_共{current_page}頁_{int(time.time())}.json")
@@ -656,7 +697,7 @@ class ResumeScraper:
                     name_text = name_match.group(1).strip()
                     # 確認提取的文本不是"更新日"或其他非名字內容
                     if name_text and not any(keyword in name_text for keyword in ['更新日', '代碼', '希望工作地', '居住地']):
-                        info['name'] = name_text
+                        info['name'] = clean_text_for_excel(name_text)
                     else:
                         logger.warning(f"提取到的名字可能有誤: {name_text}，嘗試其他方法")
                 else:
@@ -674,7 +715,7 @@ class ResumeScraper:
                                 name_text = full_text[close_tag_idx+1:end_tag_idx].strip()
                                 # 驗證提取的名字
                                 if name_text and not any(keyword in name_text for keyword in ['更新日', '代碼', '希望工作地', '居住地']):
-                                    info['name'] = name_text
+                                    info['name'] = clean_text_for_excel(name_text)
             except Exception as e:
                 logger.debug(f"從HTML標籤提取名字時出錯: {e}")
         else:
@@ -687,12 +728,12 @@ class ResumeScraper:
                 if name_age_match:
                     potential_name = name_age_match.group(1).strip()
                     if potential_name and not any(keyword in potential_name for keyword in ['更新日', '代碼', '希望工作地', '居住地']):
-                        info['name'] = potential_name
+                        info['name'] = clean_text_for_excel(potential_name)
         
         # 提取年齡
         age_match = re.search(r'(\d{1,2})歲', full_text)
         if age_match:
-            info['age'] = age_match.group(1) + '歲'
+            info['age'] = clean_text_for_excel(age_match.group(1) + '歲')
         
         # 提取性別
         if '男' in full_text[:30]:
@@ -703,11 +744,11 @@ class ResumeScraper:
         # 提取代碼和更新日期
         code_match = re.search(r'代碼：(\d+)', full_text)
         if code_match:
-            info['code'] = code_match.group(1)
+            info['code'] = clean_text_for_excel(code_match.group(1))
         
         update_match = re.search(r'更新日：(\d{4}/\d{1,2}/\d{1,2})', full_text)
         if update_match:
-            info['update_date'] = update_match.group(1)
+            info['update_date'] = clean_text_for_excel(update_match.group(1))
         
         # 處理連續欄位的情況
         
@@ -739,7 +780,7 @@ class ResumeScraper:
             if colon_idx != -1:
                 # 希望工作地的內容從冒號之後到居住地之前
                 work_location = full_text[colon_idx+1:living_loc_idx].strip()
-                info['work_location'] = work_location
+                info['work_location'] = clean_text_for_excel(work_location)
         
         # 3. 提取居住地
         if living_loc_idx != -1 and edu_idx != -1 and living_loc_idx < edu_idx:
@@ -750,13 +791,13 @@ class ResumeScraper:
             if colon_idx != -1:
                 # 居住地的內容從冒號之後到學歷之前
                 living_location = full_text[colon_idx+1:edu_idx].strip()
-                info['living_location'] = living_location
+                info['living_location'] = clean_text_for_excel(living_location)
         
         # 4. 提取學歷
         if edu_idx != -1 and desired_job_idx != -1 and edu_idx < desired_job_idx:
             # 學歷的內容從學歷關鍵字開始到希望職稱之前
             education = full_text[edu_idx:desired_job_idx].strip()
-            info['education'] = education
+            info['education'] = clean_text_for_excel(education)
         
         # 5. 提取希望職稱
         if desired_job_idx != -1 and desired_job_idx < exp_idx:
@@ -784,7 +825,7 @@ class ResumeScraper:
                         # 如果都沒找到，就取整段內容
                         desired_job = job_content.strip()
                 
-                info['desired_job'] = desired_job
+                info['desired_job'] = clean_text_for_excel(desired_job)
 
             # 5.5 提取工作時長（希望職稱與工作經驗之間的內容）
             if desired_job_idx != -1 and exp_idx != -1 and desired_job_idx < exp_idx:
@@ -801,7 +842,7 @@ class ResumeScraper:
                     
                     # 設定experience_years為這段內容
                     if experience_duration:
-                        info['experience_years'] = experience_duration
+                        info['experience_years'] = clean_text_for_excel(experience_duration)
         
         # 6. 提取工作經驗
         if exp_idx != -1:
@@ -811,7 +852,7 @@ class ResumeScraper:
             if exp_match:
                 full_exp = exp_match.group(0)  # 完整匹配，包含「工作經驗」
                 years_only = exp_match.group(1)  # 只有年資部分，如「1~2年」
-                info['experience_years'] = years_only
+                info['experience_years'] = clean_text_for_excel(years_only)
                 
                 # 計算工作經歷開始的位置
                 exp_full_pos = full_text.find(full_exp, exp_idx)
@@ -833,7 +874,7 @@ class ResumeScraper:
                     end_idx = idx
             
             work_history = work_history_content[:end_idx].strip()
-            info['work_history'] = work_history
+            info['work_history'] = clean_text_for_excel(work_history)
         
         return info
     
@@ -883,6 +924,15 @@ class ResumeScraper:
     async def download_photo(self, url, save_path):
         """簡化的照片下載方法"""
         try:
+            # 確保URL和保存路徑經過清理
+            url = clean_text_for_excel(url)
+            save_path_dir = os.path.dirname(save_path)
+            save_path_filename = os.path.basename(save_path)
+            # 確保文件名安全
+            save_path_filename = self.sanitize_filename(save_path_filename)
+            # 重新組合路徑
+            save_path = os.path.join(save_path_dir, save_path_filename)
+            
             logger.info(f"開始下載大頭照: {url}")
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             

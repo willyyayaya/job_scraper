@@ -35,13 +35,14 @@ async def retry_async(coro_func, max_retries=3, retry_delay=2, *args, **kwargs):
                 logger.error(f"已達最大重試次數，操作失敗: {str(e)}")
                 raise
 
-async def scrape_104_jobs(job_title, page_limit=3):
+async def scrape_104_jobs(job_title, page_limit=3, headless=False):
     """
     爬取 104 人力銀行網站上的職缺資訊
     
     Args:
         job_title: 要搜尋的職位名稱
         page_limit: 要爬取的頁數限制，設為 float('inf') 則不限制頁數
+        headless: 是否隱藏瀏覽器視窗，預設顯示視窗
     
     Returns:
         包含職缺詳細資訊的 DataFrame
@@ -60,12 +61,21 @@ async def scrape_104_jobs(job_title, page_limit=3):
     job_data = []
     
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)  # 設為 True 可以隱藏瀏覽器視窗
+        # 強制顯示瀏覽器視窗的設定
+        browser_args = ['--start-maximized']
+        browser = await p.chromium.launch(
+            headless=headless,  # 強制非無頭模式
+            args=browser_args
+        )
         context = await browser.new_context(
             viewport={"width": 1280, "height": 800},
             user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         )
+        # 強制啟用顯示視窗功能
         page = await context.new_page()
+
+        # 顯示瀏覽器已啟動信息
+        logger.info("瀏覽器已啟動，視窗已顯示")
         
         try:
             # 前往 104 人力銀行首頁
@@ -477,9 +487,79 @@ async def scrape_104_jobs(job_title, page_limit=3):
     logger.info(f"爬取完成，共獲取 {len(df)} 筆職缺資訊")
     return df
 
+def clean_text_for_excel(text):
+    """清理文本，移除或替換可能導致Excel存儲問題的字符"""
+    if not text or not isinstance(text, str):
+        return ""
+    
+    # 替換不可見字符和特殊控制字符
+    cleaned = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', text)
+    
+    # 處理可能被Excel誤認為公式的內容
+    # 如果文本以 =, +, -, @, 或 ( 開頭，在前面加上單引號防止被解析為公式
+    if cleaned and cleaned[0] in ['=', '+', '-', '@', '(']:
+        cleaned = "'" + cleaned
+    
+    # 替換其他可能導致問題的Unicode字符
+    problematic_chars = [
+        '\u2028', '\u2029', '\uFEFF', '\u0000',  # 基本問題字符
+        '\u001B', '\u001C', '\u001D', '\u001E', '\u001F',  # 控制字符
+        '\u000B', '\u000C'  # 垂直制表符和分頁符
+    ]
+    for char in problematic_chars:
+        cleaned = cleaned.replace(char, '')
+    
+    # 替換長破折號、特殊引號和其他可能有問題的標點符號
+    cleaned = cleaned.replace('\u2013', '-').replace('\u2014', '-')  # 替換長破折號
+    cleaned = cleaned.replace('\u2018', "'").replace('\u2019', "'")  # 替換智能引號
+    cleaned = cleaned.replace('\u201C', '"').replace('\u201D', '"')  # 替換智能雙引號
+    
+    # 替換可能導致Excel格式化問題的字符
+    cleaned = re.sub(r'[\[\]\{\}]', '', cleaned)  # 移除方括號和花括號
+    
+    # 處理括號中的文本，確保不會被誤認為公式
+    # 修改: 更嚴格地處理括號內容，以防止Excel格式問題
+    def replace_parentheses(match):
+        content = match.group(1)
+        # 如果內容包含大學或學校名稱，特別處理
+        if re.search(r'(?:大學|學院|University|College)', content, re.IGNORECASE):
+            return "(" + content.replace('(', '［').replace(')', '］') + ")"
+        return "('" + content + "')"
+    
+    cleaned = re.sub(r'\(([^)]*)\)', replace_parentheses, cleaned)
+    
+    # 處理教育信息中可能出現的問題（例如"大學畢業Rutgers University 視頻製作(美國)"）
+    if re.search(r'(?:大學|學院|University|College)', cleaned, re.IGNORECASE):
+        # 將教育信息中的括號替換為全形括號，以防止Excel誤解
+        cleaned = re.sub(r'\(([^)]*)\)', lambda m: "（" + m.group(1) + "）", cleaned)
+        # 將美國等國家名稱前的括號特別處理
+        cleaned = cleaned.replace('(美國)', '（美國）').replace('(台灣)', '（台灣）')
+        # 如果文本中有多個大學名稱，用分號分隔
+        cleaned = re.sub(r'(University|College|大學|學院)([^\s,;，；])', r'\1; \2', cleaned, flags=re.IGNORECASE)
+    
+    # 嚴格檢查是否有可能導致Excel公式問題的字符組合
+    formula_patterns = [r'=\w+\(', r'=\w+[+-/*]', r'@\w+\(']
+    for pattern in formula_patterns:
+        if re.search(pattern, cleaned):
+            # 在整個字符串前加上單引號
+            cleaned = "'" + cleaned
+            break
+    
+    # 限制字符串長度以防止Excel問題
+    max_length = 32000  # Excel單元格最大字符數限制
+    if len(cleaned) > max_length:
+        cleaned = cleaned[:max_length]
+    
+    return cleaned
+
 async def save_to_excel(df, filename="104_jobs.xlsx"):
     """將爬取的數據保存為 Excel 文件"""
     try:
+        # 清理所有文本列中的數據
+        for column in df.columns:
+            if df[column].dtype == 'object':  # 只處理字符串類型的列
+                df[column] = df[column].apply(lambda x: clean_text_for_excel(x) if isinstance(x, str) else x)
+        
         df.to_excel(filename, index=False, engine='openpyxl')
         logger.info(f"資料已保存至 {filename}")
         return True
@@ -641,11 +721,12 @@ async def main():
     except Exception as e:
         logger.error(f"程序執行過程中發生錯誤: {str(e)}")
 
-async def scrape_104_companies(company_name, page_limit=3):
+async def scrape_104_companies(company_name, page_limit=3, headless=False):
     """
     爬取104人力銀行的公司資訊
     :param company_name: 要搜尋的公司名稱
     :param page_limit: 限制爬取的頁數
+    :param headless: 是否隱藏瀏覽器視窗，預設顯示視窗
     :return: 包含公司資訊的DataFrame
     """
     # 顯示爬蟲模式
@@ -665,12 +746,21 @@ async def scrape_104_companies(company_name, page_limit=3):
     processed_companies = set()
     
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)  # 設為 True 可以隱藏瀏覽器視窗
+        # 強制顯示瀏覽器視窗的設定
+        browser_args = ['--start-maximized']
+        browser = await p.chromium.launch(
+            headless=headless,  # 強制非無頭模式
+            args=browser_args
+        )
         context = await browser.new_context(
             viewport={"width": 1280, "height": 800},
             user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         )
+        # 強制啟用顯示視窗功能
         page = await context.new_page()
+
+        # 顯示瀏覽器已啟動信息
+        logger.info("瀏覽器已啟動，視窗已顯示")
         
         try:
             # 前往104人力銀行的公司搜尋頁面

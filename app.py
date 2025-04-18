@@ -7,7 +7,7 @@ import pandas as pd
 import io
 from company_resume_scraper import ResumeScraper, ResumeScraperConfig
 # 導入104職缺和公司搜尋功能
-from job_scraper_final import scrape_104_jobs, scrape_104_companies, save_to_excel
+from job_scraper_final import scrape_104_jobs, scrape_104_companies, save_to_excel, clean_text_for_excel
 
 # 初始化session_state用於保存爬蟲結果
 if 'scrape_results' not in st.session_state:
@@ -47,6 +47,15 @@ with st.sidebar:
     
     # 更新session state
     st.session_state.scrape_type = "resume" if scrape_type == "履歷爬蟲" else "job" if scrape_type == "職缺爬蟲" else "company"
+    
+    # 瀏覽器設定
+    st.subheader("瀏覽器設定")
+    show_browser = st.checkbox("顯示瀏覽器視窗", value=True, help="勾選此項可查看爬蟲運行過程，建議保持勾選")
+    if not show_browser:
+        st.warning("不顯示瀏覽器視窗可能會導致部分網站驗證失敗")
+    
+    # 儲存瀏覽器設定到session_state
+    st.session_state.show_browser = show_browser
     
     # 檢查是否有已儲存的使用者資訊
     config_file = "user_config.json"
@@ -266,7 +275,10 @@ elif st.session_state.scrape_type == "job":
                     
                     # 執行爬蟲函數
                     try:
-                        df = asyncio.run(scrape_104_jobs(job_title, actual_page_limit))
+                        # 檢查瀏覽器設置
+                        browser_visible = "show_browser" in st.session_state and st.session_state.show_browser
+                        # 將瀏覽器設置傳遞給爬蟲函數
+                        df = asyncio.run(scrape_104_jobs(job_title, actual_page_limit, headless=(not browser_visible)))
                         end_time = time.time()
                         
                         if not df.empty:
@@ -289,6 +301,12 @@ elif st.session_state.scrape_type == "job":
                             # 保存Excel文件
                             timestamp = time.strftime('%Y%m%d_%H%M%S')
                             filename = f"104_{job_title}職缺_{timestamp}.xlsx"
+                            
+                            # 清理數據以防止Excel錯誤
+                            for column in df.columns:
+                                if df[column].dtype == 'object':  # 只處理字符串類型的列
+                                    df[column] = df[column].apply(lambda x: clean_text_for_excel(x) if isinstance(x, str) else x)
+                            
                             df.to_excel(filename, index=False)
                             st.info(f"資料已保存至檔案：{filename}")
                             
@@ -353,7 +371,10 @@ elif st.session_state.scrape_type == "company":
                     
                     # 執行爬蟲函數
                     try:
-                        df = asyncio.run(scrape_104_companies(company_name, actual_page_limit))
+                        # 檢查瀏覽器設置
+                        browser_visible = "show_browser" in st.session_state and st.session_state.show_browser
+                        # 將瀏覽器設置傳遞給爬蟲函數
+                        df = asyncio.run(scrape_104_companies(company_name, actual_page_limit, headless=(not browser_visible)))
                         end_time = time.time()
                         
                         if not df.empty:
@@ -376,6 +397,12 @@ elif st.session_state.scrape_type == "company":
                             # 保存Excel文件
                             timestamp = time.strftime('%Y%m%d_%H%M%S')
                             filename = f"104_{company_name}公司_{timestamp}.xlsx"
+                            
+                            # 清理數據以防止Excel錯誤
+                            for column in df.columns:
+                                if df[column].dtype == 'object':  # 只處理字符串類型的列
+                                    df[column] = df[column].apply(lambda x: clean_text_for_excel(x) if isinstance(x, str) else x)
+                            
                             df.to_excel(filename, index=False)
                             st.info(f"資料已保存至檔案：{filename}")
                             
@@ -415,6 +442,12 @@ if st.session_state.has_results and st.session_state.scrape_results is not None 
         buffer = io.BytesIO()
         try:
             df = pd.DataFrame(results)
+            
+            # 清理數據以防止Excel錯誤
+            for column in df.columns:
+                if df[column].dtype == 'object':  # 只處理字符串類型的列
+                    df[column] = df[column].apply(lambda x: clean_text_for_excel(x) if isinstance(x, str) else x)
+            
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                 df.to_excel(writer, index=False)
             buffer.seek(0)

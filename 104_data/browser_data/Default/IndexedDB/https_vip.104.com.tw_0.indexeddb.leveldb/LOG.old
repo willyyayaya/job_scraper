@@ -1,26 +1,14 @@
-2025/04/17-17:51:45.688 8403 Reusing MANIFEST /Users/willy/Desktop/爬蟲/job_scraper/104_data/browser_data/Default/IndexedDB/https_vip.104.com.tw_0.indexeddb.leveldb/MANIFEST-000001
-2025/04/17-17:51:45.688 8403 Recovering log #81
-2025/04/17-17:51:45.688 8403 Reusing old log /Users/willy/Desktop/爬蟲/job_scraper/104_data/browser_data/Default/IndexedDB/https_vip.104.com.tw_0.indexeddb.leveldb/000081.log 
-2025/04/17-17:51:45.688 8403 Delete type=2 #79
-2025/04/17-17:51:45.758 f303 Manual compaction at level-0 from '\x00,\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00-\x00\x00\x00' @ 0 : 0; will stop at (end)
-2025/04/17-17:51:49.556 f303 Level-0 table #86: started
-2025/04/17-17:51:49.559 f303 Level-0 table #86: 1050 bytes OK
-2025/04/17-17:51:49.560 f303 Delete type=0 #81
-2025/04/17-17:51:49.560 8303 Manual compaction at level-0 from '\x00-\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00.\x00\x00\x00' @ 0 : 0; will stop at '\x00-\x00\x00\x05' @ 990 : 1
-2025/04/17-17:51:49.560 8303 Compacting 1@0 + 1@1 files
-2025/04/17-17:51:49.561 8303 Generated table #87@0: 93 keys, 3013 bytes
-2025/04/17-17:51:49.561 8303 Compacted 1@0 + 1@1 files => 3013 bytes
-2025/04/17-17:51:49.562 8303 compacted to: files[ 0 1 1 0 0 0 0 ]
-2025/04/17-17:51:49.562 8303 Delete type=2 #86
-2025/04/17-17:51:49.566 8303 Manual compaction at level-0 from '\x00-\x00\x00\x05' @ 990 : 1 .. '\x00.\x00\x00\x00' @ 0 : 0; will stop at (end)
-2025/04/17-17:52:09.251 f303 Level-0 table #89: started
-2025/04/17-17:52:09.253 f303 Level-0 table #89: 661 bytes OK
-2025/04/17-17:52:09.254 f303 Delete type=0 #85
-2025/04/17-17:52:09.254 f303 Delete type=2 #83
-2025/04/17-17:52:09.254 8403 Manual compaction at level-0 from '\x00.\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00/\x00\x00\x00' @ 0 : 0; will stop at '\x00.\x00\x00\x05' @ 1009 : 1
-2025/04/17-17:52:09.254 8403 Compacting 1@0 + 1@1 files
-2025/04/17-17:52:09.255 8403 Generated table #90@0: 93 keys, 3012 bytes
-2025/04/17-17:52:09.255 8403 Compacted 1@0 + 1@1 files => 3012 bytes
-2025/04/17-17:52:09.256 8403 compacted to: files[ 0 1 1 0 0 0 0 ]
-2025/04/17-17:52:09.256 8403 Delete type=2 #89
-2025/04/17-17:52:09.256 8403 Manual compaction at level-0 from '\x00.\x00\x00\x05' @ 1009 : 1 .. '\x00/\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/04/18-16:34:21.203 a703 Reusing MANIFEST /Users/willy/Desktop/數辰/爬蟲/job_scraper/104_data/browser_data/Default/IndexedDB/https_vip.104.com.tw_0.indexeddb.leveldb/MANIFEST-000001
+2025/04/18-16:34:21.203 a703 Recovering log #211
+2025/04/18-16:34:21.203 a703 Reusing old log /Users/willy/Desktop/數辰/爬蟲/job_scraper/104_data/browser_data/Default/IndexedDB/https_vip.104.com.tw_0.indexeddb.leveldb/000211.log 
+2025/04/18-16:34:21.210 f403 Level-0 table #216: started
+2025/04/18-16:34:21.211 f403 Level-0 table #216: 1049 bytes OK
+2025/04/18-16:34:21.212 f403 Delete type=0 #211
+2025/04/18-16:34:21.212 f403 Manual compaction at level-0 from '\x00b\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00c\x00\x00\x00' @ 0 : 0; will stop at '\x00b\x00\x00\x05' @ 2009 : 1
+2025/04/18-16:34:21.212 f403 Compacting 1@0 + 1@1 files
+2025/04/18-16:34:21.213 f403 Generated table #217@0: 93 keys, 3031 bytes
+2025/04/18-16:34:21.213 f403 Compacted 1@0 + 1@1 files => 3031 bytes
+2025/04/18-16:34:21.213 f403 compacted to: files[ 0 1 1 0 0 0 0 ]
+2025/04/18-16:34:21.214 f403 Delete type=2 #216
+2025/04/18-16:34:21.214 a703 Manual compaction at level-0 from '\x00b\x00\x00\x05' @ 2009 : 1 .. '\x00c\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/04/18-16:34:25.445 8703 Manual compaction at level-0 from '\x00c\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00d\x00\x00\x00' @ 0 : 0; will stop at (end)
