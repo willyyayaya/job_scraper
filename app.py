@@ -57,7 +57,6 @@ with st.sidebar:
     # 儲存瀏覽器設定到session_state
     st.session_state.show_browser = show_browser
     
-    # 隱藏顯示帳號信息的部分
     # 檢查是否有已儲存的使用者資訊
     config_file = "user_config.json"
     saved_config = {}
@@ -66,40 +65,34 @@ with st.sidebar:
         try:
             with open(config_file, "r", encoding="utf-8") as f:
                 saved_config = json.load(f)
-            # 移除成功找到帳號的提示
-            # st.success("找到已儲存的帳號資訊")
+            st.success("找到已儲存的帳號資訊")
         except:
-            # 移除讀取失敗的警告
-            # st.warning("讀取儲存的帳號資訊時出錯")
-            pass
+            st.warning("讀取儲存的帳號資訊時出錯")
     
-    # 隱藏已儲存帳號的顯示和選項
     use_saved = False
     if saved_config.get("username"):
-        # 移除顯示和選擇已儲存帳號的選項
-        # use_saved = st.checkbox(f"使用已儲存的帳號 ({saved_config.get('username')})", value=True)
-        use_saved = True
+        use_saved = st.checkbox(f"使用已儲存的帳號 ({saved_config.get('username')})", value=True)
 
 # 建立履歷爬蟲表單
 if st.session_state.scrape_type == "resume":
     st.header("104履歷爬蟲")
     
     with st.form("resume_scraper_form"):
-        # 隱藏帳號密碼輸入，直接從配置文件讀取或使用預設值
-        if os.path.exists(config_file) and saved_config.get("username") and saved_config.get("password"):
-            username = saved_config.get("username")
-            password = saved_config.get("password")
-        else:
-            # 如果沒有儲存的帳號，使用隱藏輸入（實際環境應改為從環境變數或安全配置讀取）
-            username = "default_username"  # 應替換為實際使用的預設帳號
-            password = "default_password"  # 應替換為實際使用的預設密碼
+        col1, col2 = st.columns(2)
         
-        # 只顯示關鍵詞和頁數輸入
-        keyword = st.text_input("搜索關鍵詞 (直接留空搜索全部)")
-        page_limit = st.number_input("要爬取的頁數", min_value=1, value=1)
+        with col1:
+            if use_saved and saved_config.get("username") and saved_config.get("password"):
+                username = st.text_input("104企業會員帳號", value=saved_config.get("username"))
+                password = st.text_input("104企業會員密碼", value=saved_config.get("password"), type="password")
+            else:
+                username = st.text_input("104企業會員帳號")
+                password = st.text_input("104企業會員密碼", type="password")
         
-        # 移除帳號儲存選項
-        # save_account = st.checkbox("記住帳號密碼")
+        with col2:
+            keyword = st.text_input("搜索關鍵詞 (直接留空搜索全部)")
+            page_limit = st.number_input("要爬取的頁數", min_value=1, value=1)
+            
+        save_account = st.checkbox("記住帳號密碼")
         
         col3, col4 = st.columns([1, 3])
         with col3:
@@ -107,14 +100,14 @@ if st.session_state.scrape_type == "resume":
     
     # 處理履歷爬蟲表單提交
     if submitted:
-        # 移除儲存帳號密碼的邏輯，因為已經不顯示該選項
-        # if save_account:
-        #    try:
-        #        with open(config_file, "w", encoding="utf-8") as f:
-        #            json.dump({"username": username, "password": password}, f)
-        #        st.success("已儲存帳號資訊")
-        #    except Exception as e:
-        #        st.error(f"儲存帳號資訊失敗: {str(e)}")
+        # 儲存帳號密碼（如選擇）
+        if save_account:
+            try:
+                with open(config_file, "w", encoding="utf-8") as f:
+                    json.dump({"username": username, "password": password}, f)
+                st.success("已儲存帳號資訊")
+            except Exception as e:
+                st.error(f"儲存帳號資訊失敗: {str(e)}")
         
         # 建立進度顯示區域
         progress_bar = st.progress(0)
@@ -542,15 +535,16 @@ with st.expander("使用說明"):
     
     #### 爬蟲類型
     本工具提供三種爬蟲功能：
-    1. **履歷爬蟲** - 爬取符合條件的求職者履歷
+    1. **履歷爬蟲** - 爬取符合條件的求職者履歷（需要104企業會員帳號）
     2. **職缺爬蟲** - 爬取符合職位名稱的工作職缺
     3. **公司爬蟲** - 爬取符合公司名稱的公司資訊
     
     #### 履歷爬蟲使用方法
-    1. 輸入您想搜尋的關鍵詞（可選）
-    2. 設定要爬取的頁數
-    3. 點擊「開始爬取」按鈕
-    4. 下載選項：
+    1. 輸入您的104企業會員帳號和密碼
+    2. 輸入您想搜尋的關鍵詞（可選）
+    3. 設定要爬取的頁數
+    4. 點擊「開始爬取」按鈕
+    5. 下載選項：
        - 「下載基本Excel檔案」- 快速下載但不包含大頭照
        - 「下載帶大頭照的Excel檔案」- 包含求職者大頭照
     
