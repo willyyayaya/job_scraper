@@ -6,8 +6,6 @@ import os
 import logging
 import random
 from playwright.async_api import async_playwright, TimeoutError
-import traceback
-from urllib.parse import quote
 
 # 設置日誌
 logging.basicConfig(
@@ -497,12 +495,11 @@ def print_banner():
     ██║╚██████╔╝     ██║    ███████║╚██████╗██║  ██║██║  ██║██║     ███████╗██║  ██║
     ╚═╝ ╚═════╝      ╚═╝    ╚══════╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚══════╝╚═╝  ╚═╝
                                                                                     
-    104人力銀行爬蟲程式 v2.0
+    104人力銀行職缺爬蟲程式 v1.1
     使用說明：
-    1. 選擇搜尋類型：工作職缺或公司資訊
-    2. 輸入關鍵字（工作職位或公司名稱）
-    3. 輸入要爬取的頁數，建議1-5頁（輸入0則不限制頁數，會爬取所有可找到的頁面）
-    4. 程式會自動爬取資訊並保存為Excel文件
+    1. 輸入職位名稱（例如：前端工程師、行銷企劃等）
+    2. 輸入要爬取的頁數，建議1-5頁（輸入0則不限制頁數，會爬取所有可找到的頁面）
+    3. 程式會自動爬取職缺資訊並保存為Excel文件
 
     注意：爬取頁數過多可能會耗時較長，且有被網站限制的風險，請謹慎使用
     """
@@ -513,510 +510,66 @@ async def main():
     print_banner()
     
     try:
-        # 新增：選擇搜尋類型 - 工作還是公司
-        print("\n請選擇要搜尋的類型：")
-        print("1. 搜尋工作職缺")
-        print("2. 搜尋公司資訊")
+        job_title = input("請輸入要搜尋的職位名稱: ")
+        if not job_title:
+            logger.error("職位名稱不能為空")
+            return
         
-        search_type = input("請輸入選項 (1 或 2): ")
-        while search_type not in ['1', '2']:
-            search_type = input("輸入有誤，請重新輸入 (1 或 2): ")
-        
-        if search_type == '1':
-            # 原本的工作搜尋功能
-            job_title = input("請輸入要搜尋的職位名稱: ")
-            if not job_title:
-                logger.error("職位名稱不能為空")
-                return
-            
-            page_limit_input = input("請輸入要爬取的頁數 (輸入0則不限制頁數，會爬取所有頁面): ")
-            
-            try:
-                page_limit = int(page_limit_input) if page_limit_input else 3
-            except ValueError:
-                logger.error("請輸入有效的數字")
-                return
-            
-            if page_limit < 0:
-                logger.error("頁數必須大於或等於 0")
-                return
-            
-            # 轉換 page_limit 為實際限制值
-            if page_limit == 0:
-                page_limit = float('inf')  # 使用無限大表示不限頁數
-                logger.info(f"開始爬取「{job_title}」，不限制頁數")
-                print("您選擇了不限制頁數爬取，程式會爬取所有可找到的頁面，這可能需要較長時間...")
-            else:
-                logger.info(f"開始爬取「{job_title}」，共 {page_limit} 頁")
-            
-            start_time = time.time()
-            df = await scrape_104_jobs(job_title, page_limit)
-            end_time = time.time()
-            
-            if not df.empty:
-                # 將結果保存為 Excel 文件
-                timestamp = time.strftime('%Y%m%d_%H%M%S')
-                filename = f"104_{job_title}職缺_{timestamp}.xlsx"
-                await save_to_excel(df, filename)
-                
-                # 顯示摘要
-                print("\n" + "="*50)
-                print("爬取結果摘要:")
-                print("="*50)
-                print(f"搜尋關鍵字：{job_title}")
-                
-                # 顯示實際爬取頁數
-                actual_pages = 0
-                if page_limit == float('inf'):
-                    # 計算實際爬取的頁數
-                    job_count = len(df)
-                    avg_per_page = 20  # 假設每頁平均20個職缺
-                    actual_pages = max(1, job_count // avg_per_page)
-                    print(f"爬取頁數：不限制 (實際約爬取了 {actual_pages} 頁)")
-                else:
-                    print(f"爬取頁數：{page_limit}")
-                    
-                print(f"共爬取到 {len(df)} 筆職缺資訊")
-                print(f"耗時：{end_time - start_time:.2f} 秒")
-                print(f"資料已保存至：{filename}")
-                print("="*50)
-            else:
-                logger.warning("未爬取到任何職缺資訊")
-        
-        elif search_type == '2':
-            # 新增：公司搜尋功能
-            company_name = input("請輸入要搜尋的公司名稱: ")
-            if not company_name:
-                logger.error("公司名稱不能為空")
-                return
-            
-            page_limit_input = input("請輸入要爬取的頁數 (輸入0則不限制頁數，會爬取所有頁面): ")
-            
-            try:
-                page_limit = int(page_limit_input) if page_limit_input else 3
-            except ValueError:
-                logger.error("請輸入有效的數字")
-                return
-            
-            if page_limit < 0:
-                logger.error("頁數必須大於或等於 0")
-                return
-            
-            # 轉換 page_limit 為實際限制值
-            if page_limit == 0:
-                page_limit = float('inf')  # 使用無限大表示不限頁數
-                logger.info(f"開始爬取「{company_name}」公司資訊，不限制頁數")
-                print("您選擇了不限制頁數爬取，程式會爬取所有可找到的頁面，這可能需要較長時間...")
-            else:
-                logger.info(f"開始爬取「{company_name}」公司資訊，共 {page_limit} 頁")
-            
-            start_time = time.time()
-            df = await scrape_104_companies(company_name, page_limit)
-            end_time = time.time()
-            
-            if not df.empty:
-                # 將結果保存為 Excel 文件
-                timestamp = time.strftime('%Y%m%d_%H%M%S')
-                filename = f"104_{company_name}公司_{timestamp}.xlsx"
-                await save_to_excel(df, filename)
-                
-                # 顯示摘要
-                print("\n" + "="*50)
-                print("爬取結果摘要:")
-                print("="*50)
-                print(f"搜尋關鍵字：{company_name}")
-                
-                if page_limit == float('inf'):
-                    print(f"爬取頁數：不限制")
-                else:
-                    print(f"爬取頁數：{page_limit}")
-                
-                print(f"共爬取到 {len(df)} 筆公司資訊")
-                print(f"耗時：{end_time - start_time:.2f} 秒")
-                print(f"資料已保存至：{filename}")
-                print("="*50)
-            else:
-                logger.warning("未爬取到任何公司資訊")
-            
-    except Exception as e:
-        logger.error(f"程序執行過程中發生錯誤: {str(e)}")
-
-async def scrape_104_companies(company_name, page_limit=3):
-    """
-    爬取104人力銀行的公司資訊
-    :param company_name: 要搜尋的公司名稱
-    :param page_limit: 限制爬取的頁數
-    :return: 包含公司資訊的DataFrame
-    """
-    # 顯示爬蟲模式
-    if page_limit == float('inf'):
-        logger.info(f"開始不限頁數爬取「{company_name}」公司資訊")
-    else:
-        logger.info(f"開始爬取「{company_name}」公司資訊，頁數限制: {page_limit} 頁")
-    
-    # 創建目錄保存日誌和臨時數據
-    timestamp = time.strftime('%Y%m%d_%H%M%S')
-    temp_dir = f"temp_{timestamp}"
-    os.makedirs(temp_dir, exist_ok=True)
-    
-    # 初始化空列表存儲公司數據
-    company_data = []
-    # 用於追蹤已處理的公司名稱，避免重複
-    processed_companies = set()
-    
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)  # 設為 True 可以隱藏瀏覽器視窗
-        context = await browser.new_context(
-            viewport={"width": 1280, "height": 800},
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
-        page = await context.new_page()
+        page_limit_input = input("請輸入要爬取的頁數 (輸入0則不限制頁數，會爬取所有頁面): ")
         
         try:
-            # 前往104人力銀行的公司搜尋頁面
-            logger.info("正在訪問 104 人力銀行公司搜尋頁面...")
+            page_limit = int(page_limit_input) if page_limit_input else 3
+        except ValueError:
+            logger.error("請輸入有效的數字")
+            return
+        
+        if page_limit < 0:
+            logger.error("頁數必須大於或等於 0")
+            return
+        
+        # 轉換 page_limit 為實際限制值
+        if page_limit == 0:
+            page_limit = float('inf')  # 使用無限大表示不限頁數
+            logger.info(f"開始爬取「{job_title}」，不限制頁數")
+            print("您選擇了不限制頁數爬取，程式會爬取所有可找到的頁面，這可能需要較長時間...")
+        else:
+            logger.info(f"開始爬取「{job_title}」，共 {page_limit} 頁")
+        
+        start_time = time.time()
+        df = await scrape_104_jobs(job_title, page_limit)
+        end_time = time.time()
+        
+        if not df.empty:
+            # 將結果保存為 Excel 文件
+            timestamp = time.strftime('%Y%m%d_%H%M%S')
+            filename = f"104_{job_title}職缺_{timestamp}.xlsx"
+            await save_to_excel(df, filename)
             
-            # 搜尋URL
-            encoded_company_name = quote(company_name)
-            search_url = f"https://www.104.com.tw/company/search/?keyword={encoded_company_name}"
+            # 顯示摘要
+            print("\n" + "="*50)
+            print("爬取結果摘要:")
+            print("="*50)
+            print(f"搜尋關鍵字：{job_title}")
             
-            # 訪問搜尋頁面
-            logger.info(f"正在訪問 URL: {search_url}")
-            await page.goto(search_url, timeout=60000)
-            await page.wait_for_load_state('networkidle', timeout=60000)
-            
-            # 儲存搜尋結果頁面 HTML，便於分析
-            html_content = await page.content()
-            with open(f"{temp_dir}/company_search_result.html", "w", encoding="utf-8") as f:
-                f.write(html_content)
-            logger.info(f"已保存搜尋結果頁面 HTML 至 {temp_dir}/company_search_result.html")
-            
-            # 保存搜尋結果頁面截圖
-            await page.screenshot(path=f"{temp_dir}/company_search_result.png")
-            logger.info(f"已保存搜尋結果頁面截圖至 {temp_dir}/company_search_result.png")
-            
-            # 檢查是否有公司結果 - 多種可能的提示
-            no_result_selectors = [
-                '.no-result',
-                '.empty-result',
-                '.search-no-result',
-                'div.container:has-text("查無符合條件的公司")',
-                'div:has-text("沒有找到相關公司")'
-            ]
-            
-            no_result = False
-            for selector in no_result_selectors:
-                try:
-                    no_result_elem = await page.query_selector(selector)
-                    if no_result_elem:
-                        no_result = True
-                        logger.warning(f"使用選擇器 '{selector}' 檢測到無結果")
-                        break
-                except:
-                    continue
-            
-            # 使用JavaScript進一步檢查是否有結果
-            if not no_result:
-                no_result = await page.evaluate('''() => {
-                    // 檢查頁面文字
-                    const pageText = document.body.innerText;
-                    return pageText.includes("查無符合條件的公司") || 
-                           pageText.includes("沒有找到相關公司") ||
-                           pageText.includes("查無資料");
-                }''')
-            
-            if no_result:
-                logger.warning("未找到任何公司")
-                await page.screenshot(path=f"{temp_dir}/no_result.png")
-                return pd.DataFrame()  # 返回空DataFrame
-            
-            # 從第1頁開始爬取，直到達到頁面限制或沒有更多頁面
-            current_page = 1
-            
-            while current_page <= page_limit:
-                logger.info(f"正在處理第 {current_page} 頁")
+            # 顯示實際爬取頁數
+            actual_pages = 0
+            if page_limit == float('inf'):
+                # 計算實際爬取的頁數
+                job_count = len(df)
+                avg_per_page = 20  # 假設每頁平均20個職缺
+                actual_pages = max(1, job_count // avg_per_page)
+                print(f"爬取頁數：不限制 (實際約爬取了 {actual_pages} 頁)")
+            else:
+                print(f"爬取頁數：{page_limit}")
                 
-                # 等待頁面加載
-                await asyncio.sleep(3)  # 給予更充分的時間讓頁面渲染
-                
-                # 獲取完整頁面並截圖便於分析
-                await page.screenshot(path=f"{temp_dir}/page_{current_page}.png")
-                
-                # 首先直接檢查當前頁面的HTML結構
-                page_html = await page.content()
-                with open(f"{temp_dir}/page_{current_page}_full.html", "w", encoding="utf-8") as f:
-                    f.write(page_html)
-                
-                # 找公司項目 - 處理Vue.js組件和標準元素
-                # 根據用戶提供的HTML，我們需要找出".company-list__info"類的元素
-                selectors = [
-                    '.company-list__info',  # 新的Vue.js結構
-                    '.company-item',  # 舊版結構
-                    'div[class*="company-list"]', # 通用選擇器
-                    'div:has(.company-name-link)' # 基於公司名稱鏈接的選擇器
-                ]
-                
-                company_items = []
-                for selector in selectors:
-                    company_items = await page.query_selector_all(selector)
-                    if company_items and len(company_items) > 0:
-                        logger.info(f"使用選擇器 '{selector}' 找到 {len(company_items)} 個公司項目")
-                        break
-                
-                if not company_items or len(company_items) == 0:
-                    logger.warning(f"第 {current_page} 頁未找到公司項目")
-                    break
-                
-                logger.info(f"在第 {current_page} 頁找到 {len(company_items)} 個潛在公司項目")
-                
-                # 遍歷每個公司項目
-                for i, item in enumerate(company_items):
-                    try:
-                        # 獲取公司項目的HTML以便分析
-                        item_html = await item.evaluate("el => el.outerHTML")
-                        with open(f"{temp_dir}/company_item_{current_page}_{i+1}.html", "w", encoding="utf-8") as f:
-                            f.write(item_html)
-                        
-                        # 獲取公司名稱 - 新的選擇器組合
-                        company_name_selectors = [
-                            '.company-name-link a',  # 新版Vue結構
-                            'a.company-name-link--pc',  # 桌面版名稱鏈接
-                            'a.company-name-link--mobile',  # 移動版名稱鏈接
-                            'h2 a, h3 a, a.n-link',  # 舊版選擇器
-                            'a[data-gtm-cmps="瀏覽公司"]',  # 基於GTM屬性
-                            'a[title]:not([title=""]):not([title*="工作機會"])'  # 基於標題屬性的通用選擇器
-                        ]
-                        
-                        company_name_element = None
-                        for selector in company_name_selectors:
-                            company_name_element = await item.query_selector(selector)
-                            if company_name_element:
-                                break
-                        
-                        if not company_name_element:
-                            logger.warning(f"項目 {i+1} 沒有找到公司名稱元素，跳過")
-                            continue
-                        
-                        company_name = await company_name_element.inner_text()
-                        company_name = company_name.strip()
-                        
-                        # 獲取公司URL
-                        company_url = await company_name_element.get_attribute("href")
-                        if company_url and not company_url.startswith("http"):
-                            company_url = f"https://www.104.com.tw{company_url}" if not company_url.startswith("//") else f"https:{company_url}"
-                        
-                        # 檢查公司名稱是否有效
-                        if not company_name or len(company_name) <= 1 or company_name.lower() == "null":
-                            logger.warning(f"項目 {i+1} 公司名稱無效: '{company_name}'，跳過")
-                            continue
-                        
-                        # 跳過已處理的公司名稱
-                        if company_name in processed_companies:
-                            logger.info(f"公司 '{company_name}' 已經處理過，跳過")
-                            continue
-                        
-                        processed_companies.add(company_name)
-                        
-                        # 獲取公司標籤（如"上市公司"、"新鮮人請進"等）
-                        tag_selectors = [
-                            'span.badge',
-                            'span.rounded-pill',
-                            '.company-list__tags span'
-                        ]
-                        
-                        company_tags = []
-                        for tag_selector in tag_selectors:
-                            tag_elements = await item.query_selector_all(tag_selector)
-                            for tag_element in tag_elements:
-                                tag_text = await tag_element.inner_text()
-                                tag_text = tag_text.strip()
-                                if tag_text and not any(text in tag_text.lower() for text in ['查看', '關注', '評論']):
-                                    company_tags.append(tag_text)
-                        
-                        company_tags_text = ", ".join(company_tags) if company_tags else "無標籤"
-                        
-                        # 獲取地點和產業 - 新的選擇器組合
-                        location_industry_selectors = [
-                            '.company-list__infoTags span',  # 新版Vue結構
-                            'p.mb-0.text-truncate, p.text-truncate',  # 舊版結構
-                            'span[data-v-e3fvojuuftu="company-list-company-summary-info-tags-items"]',  # 基於Vue屬性
-                            '.h4:not(:has(a))'  # 不包含鏈接的h4元素
-                        ]
-                        
-                        # 提取地點和產業
-                        location = ""
-                        industry = ""
-                        capital = "未提供"
-                        employee_count = "未提供"
-                        review = "未提供"
-                        
-                        # 從公司卡片中提取各種標籤
-                        for selector in location_industry_selectors:
-                            info_tags = await item.query_selector_all(selector)
-                            for tag in info_tags:
-                                tag_text = await tag.inner_text()
-                                tag_text = tag_text.strip()
-                                
-                                # 根據內容判斷標籤類型
-                                if "市" in tag_text or "縣" in tag_text or "區" in tag_text:
-                                    location = tag_text
-                                elif "業" in tag_text and "公司" not in tag_text:
-                                    industry = tag_text
-                                elif "資本額" in tag_text:
-                                    capital = tag_text
-                                elif "員工數" in tag_text:
-                                    employee_count = tag_text
-                                elif "公司評論" in tag_text:
-                                    review_parts = tag_text.split()
-                                    if len(review_parts) > 1:
-                                        review = review_parts[-1]
-                        
-                        # 如果找不到位置和產業，嘗試備用方法
-                        if not location and not industry:
-                            # 獲取所有文本
-                            all_text = await item.evaluate("el => el.innerText")
-                            
-                            # 尋找地點
-                            location_match = re.search(r'(?:台|臺|新|桃|苗|彰|雲|嘉|高|屏|宜|花|南|澎|金|連)[^,，、]{1,10}(?:市|縣|區)', all_text)
-                            if location_match:
-                                location = location_match.group(0)
-                            
-                            # 尋找產業
-                            industry_match = re.search(r'[^\s,，、]{2,10}(?:製造|服務|銷售|科技|資訊|電子|金融|保險|營造|貿易|百貨|餐飲|物流|運輸|航空|教育|顧問|設計|傳播|媒體|娛樂|零售|批發|醫療|生技|農業|木業)', all_text)
-                            if industry_match:
-                                industry = industry_match.group(0)
-                        
-                        # 獲取公司簡介
-                        description_selectors = [
-                            '.company-list__description',  # 新版Vue結構
-                            'p.mb-6.body-3.text-truncate-2, p.text-truncate-2'  # 舊版結構
-                        ]
-                        
-                        description = ""
-                        for selector in description_selectors:
-                            description_element = await item.query_selector(selector)
-                            if description_element:
-                                description = await description_element.inner_text()
-                                description = description.strip()
-                                break
-                        
-                        # 將公司信息添加到列表
-                        company_data.append({
-                            '公司名稱': company_name,
-                            '公司標籤': company_tags_text,
-                            '地點': location,
-                            '產業類別': industry,
-                            '公司簡介': description,
-                            '資本額': capital,
-                            '員工數': employee_count,
-                            '公司評論': review,
-                            '公司網址': company_url
-                        })
-                        
-                        logger.info(f"已成功爬取公司：{company_name}")
-                        
-                    except Exception as e:
-                        logger.error(f"處理第 {current_page} 頁第 {i+1} 項時出錯: {str(e)}")
-                        traceback.print_exc()
-                        continue
-                
-                # 每頁處理完後，儲存一次數據，防止中途中斷丟失
-                temp_df = pd.DataFrame(company_data)
-                temp_filename = f"{temp_dir}/104_{company_name}_temp_page{current_page}.xlsx"
-                await save_to_excel(temp_df, temp_filename)
-                logger.info(f"已保存當前進度至 {temp_filename}")
-                
-                # 檢查是否需要繼續爬取下一頁
-                if current_page >= page_limit:
-                    logger.info(f"已達到目標頁數限制 ({page_limit} 頁)，爬蟲結束")
-                    break
-                
-                # 檢查是否有下一頁按鈕
-                next_page_selectors = [
-                    '.pagination li:last-child a',  # 主要選擇器
-                    'a[data-gtm-promotion="下一頁"]',  # 可能的GTM標籤
-                    'a.page-link[aria-label="Next"]',  # Bootstrap分頁樣式
-                    'a:has-text("下一頁")',
-                    'button:has-text("下一頁")',
-                    '.n-pagination .n-pagination-item:last-child',  # 新版104分頁
-                    '.n-pagination .n-pagination-item--next'  # 另一種新版分頁
-                ]
-                
-                next_page_button = None
-                for selector in next_page_selectors:
-                    next_page_button = await page.query_selector(selector)
-                    if next_page_button:
-                        # 檢查是否被禁用
-                        is_disabled = await next_page_button.evaluate("""(element) => {
-                            return element.classList.contains('disabled') || 
-                                   element.hasAttribute('disabled') || 
-                                   element.parentElement.classList.contains('disabled') ||
-                                   element.getAttribute('aria-disabled') === 'true';
-                        }""")
-                        
-                        if not is_disabled:
-                            logger.info(f"找到可用的下一頁按鈕: {selector}")
-                            break
-                        else:
-                            next_page_button = None
-                
-                if not next_page_button:
-                    logger.info("找不到下一頁按鈕，可能已到達最後一頁")
-                    break
-                
-                # 點擊下一頁按鈕
-                try:
-                    logger.info(f"正在切換到第 {current_page + 1} 頁")
-                    
-                    # 確保按鈕在視野內
-                    await next_page_button.scroll_into_view_if_needed()
-                    await asyncio.sleep(1)
-                    
-                    # 嘗試點擊
-                    await next_page_button.click()
-                    logger.info("已點擊下一頁按鈕")
-                    
-                    # 等待頁面加載
-                    await page.wait_for_load_state('networkidle', timeout=30000)
-                    await asyncio.sleep(3)  # 等待內容加載
-                    
-                    # 確認頁面已經變更
-                    current_page += 1
-                except Exception as e:
-                    logger.error(f"點擊下一頁按鈕時出錯: {str(e)}")
-                    
-                    # 嘗試使用JavaScript點擊
-                    try:
-                        await page.evaluate("""(element) => {
-                            element.click();
-                        }""", next_page_button)
-                        logger.info("已使用JavaScript點擊下一頁按鈕")
-                        
-                        await page.wait_for_load_state('networkidle', timeout=30000)
-                        await asyncio.sleep(3)
-                        
-                        current_page += 1
-                    except Exception as js_e:
-                        logger.error(f"JavaScript點擊下一頁按鈕失敗: {str(js_e)}")
-                        break
-            
-        except Exception as e:
-            logger.error(f"爬取公司信息時發生錯誤: {str(e)}")
-            traceback.print_exc()
-            # 嘗試保存當前頁面以便分析問題
-            try:
-                await page.screenshot(path=f"{temp_dir}/error_page.png")
-                logger.info(f"已保存錯誤頁面至 {temp_dir}/error_page.png")
-            except:
-                pass
-        finally:
-            # 關閉瀏覽器
-            await browser.close()
-    
-    # 創建 DataFrame 並返回結果
-    df = pd.DataFrame(company_data)
-    logger.info(f"爬取完成，共獲取 {len(df)} 筆公司資訊")
-    return df
+            print(f"共爬取到 {len(df)} 筆職缺資訊")
+            print(f"耗時：{end_time - start_time:.2f} 秒")
+            print(f"資料已保存至：{filename}")
+            print("="*50)
+        else:
+            logger.warning("未爬取到任何職缺資訊")
+    except Exception as e:
+        logger.error(f"程序執行過程中發生錯誤: {str(e)}")
 
 if __name__ == "__main__":
     asyncio.run(main()) 
